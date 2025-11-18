@@ -24,32 +24,23 @@ class AlphaVantageClient:
             raise ValueError(data["Error Message"])
         return data
 
-    def get_daily(
-        self,
-        symbol: str,
-        output_size: str = "compact",
-        *,
-        outputsize: Optional[str] = None,
-    ) -> pd.DataFrame:
+    def get_daily(self, symbol: str, outputsize: str = "compact") -> pd.DataFrame:
         """Fetch daily adjusted time series for the given symbol.
 
         Args:
             symbol: Ticker symbol to request.
-            output_size: Alpha Vantage output size parameter ("compact" or "full").
-            outputsize: Deprecated alias for ``output_size`` to preserve compatibility.
+            outputsize: Alpha Vantage outputsize parameter ("compact" or "full").
 
         Returns:
             A pandas DataFrame indexed by date with OHLCV and adjusted close columns.
         """
-
-        effective_outputsize = outputsize or output_size
 
         params = {
             "function": "TIME_SERIES_DAILY_ADJUSTED",
             "symbol": symbol,
             "apikey": self.api_key,
             "datatype": "json",
-            "outputsize": effective_outputsize,
+            "outputsize": outputsize,
         }
 
         data = self._get(params)
