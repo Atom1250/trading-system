@@ -29,9 +29,17 @@ def run_backtest(symbol: str, short_window: int, long_window: int, outputsize: s
 
     # 4. Run backtest
     backtester = Backtester()
-    results = backtester.run(df)  # expected to return a dict
+    results_df = backtester.run(df)
 
-    return results
+    cumulative_return = float(results_df["cumulative_returns"].iloc[-1]) if not results_df.empty else 0.0
+    max_drawdown = float(results_df["drawdown"].min()) if not results_df.empty else 0.0
+
+    return {
+        "cumulative_return": cumulative_return,
+        "max_drawdown": max_drawdown,
+        "results_path": str(backtester.results_path),
+        "results": results_df,
+    }
 
 
 def main():
