@@ -20,8 +20,20 @@ class AlphaVantageClient:
         response = self.session.get(self.BASE_URL, params=params, timeout=30)
         response.raise_for_status()
         data = response.json()
+
+        # Explicit Alpha Vantage error formats
         if "Error Message" in data:
-            raise ValueError(data["Error Message"])
+            # Invalid API call, bad symbol, or similar
+            raise ValueError(f"Alpha Vantage error: {data['Error Message']}")
+
+        if "Note" in data:
+            # Typically rate limit / quota issues
+            raise RuntimeError(f"Alpha Vantage note (likely rate limit): {data['Note']}")
+
+        if "Information" in data:
+            # Other informational response (often related to API key usage)
+            raise RuntimeError(f"Alpha Vantage information: {data['Information']}")
+
         return data
 
     def get_daily(
