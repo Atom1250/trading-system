@@ -7,14 +7,14 @@ from backtesting.backtester import Backtester
 from config.settings import ALPHA_VANTAGE_API_KEY
 
 
-def run_backtest(symbol: str, short_window: int, long_window: int, output_size: str = "compact"):
+def run_backtest(symbol: str, short_window: int, long_window: int, outputsize: str = "compact"):
     """
     Core function that runs the full backtest and returns a results dict.
     This is called by both the console UI and the Streamlit UI.
     """
     # 1. Download data
     client = AlphaVantageClient(ALPHA_VANTAGE_API_KEY)
-    df = client.get_daily(symbol=symbol, output_size=output_size)
+    df = client.get_daily(symbol=symbol, outputsize=outputsize)
 
     # 2. Compute indicators needed by the strategy
     df["sma_short"] = sma(df, window=short_window)
@@ -57,15 +57,15 @@ def main():
         print("Short window must be smaller than long window.")
         return
 
-    output_size = input("Output size 'compact' or 'full' [compact]: ").strip().lower()
-    if output_size == "":
-        output_size = "compact"
-    if output_size not in ("compact", "full"):
+    outputsize = input("Output size 'compact' or 'full' [compact]: ").strip().lower()
+    if outputsize == "":
+        outputsize = "compact"
+    if outputsize not in ("compact", "full"):
         print("Invalid output size, defaulting to 'compact'.")
-        output_size = "compact"
+        outputsize = "compact"
 
     print("\nRunning backtest...")
-    results = run_backtest(symbol, short_window, long_window, output_size)
+    results = run_backtest(symbol, short_window, long_window, outputsize)
 
     # Expected keys in results: 'cumulative_return', 'max_drawdown'
     print("\n=== Backtest Summary ===")

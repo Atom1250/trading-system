@@ -11,7 +11,7 @@ st.markdown("Use this interface to run the moving average crossover strategy bac
 symbol = st.text_input("Symbol", value="AAPL")
 short_window = st.number_input("Short moving average window", min_value=1, value=20, step=1)
 long_window = st.number_input("Long moving average window", min_value=2, value=50, step=1)
-output_size = st.selectbox("Output size", options=["compact", "full"], index=0)
+outputsize = st.selectbox("Output size", options=["compact", "full"], index=0)
 
 # Run button
 if st.button("Run backtest"):
@@ -25,7 +25,7 @@ if st.button("Run backtest"):
                 symbol=symbol.strip().upper(),
                 short_window=int(short_window),
                 long_window=int(long_window),
-                output_size=output_size,
+                outputsize=outputsize,
             )
 
         st.success("Backtest complete!")
