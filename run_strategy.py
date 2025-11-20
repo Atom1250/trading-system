@@ -29,7 +29,7 @@ def run_backtest(symbol: str, short_window: int, long_window: int, outputsize: s
 
     # 4. Run backtest
     backtester = Backtester()
-    results = backtester.run(df)  # expected to return a dict
+    results = backtester.run(df)
 
     return results
 

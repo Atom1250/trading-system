@@ -32,6 +32,7 @@ class AlphaVantageClient:
 
         if "Information" in data:
             # Other informational response (often related to API key usage)
+            print(f"Alpha Vantage message: {data['Information']}")
             raise RuntimeError(f"Alpha Vantage information: {data['Information']}")
 
         return data
