@@ -19,14 +19,15 @@ class Backtester:
         self.signal_column = signal_column
         self.results_path = Path(results_path)
 
-    def run(self, df: pd.DataFrame) -> pd.DataFrame:
-        """Execute the backtest and export results.
+    def run(self, df: pd.DataFrame) -> dict[str, pd.DataFrame | float | str]:
+        """Execute the backtest, export results, and compute summary metrics.
 
         Args:
             df: Price DataFrame with columns for price and strategy signals.
 
         Returns:
-            DataFrame containing returns, cumulative returns, and drawdown.
+            Dict containing the full results DataFrame, cumulative return,
+            maximum drawdown, and the export path.
         """
         self._validate_inputs(df)
 
@@ -49,7 +50,16 @@ class Backtester:
         results["drawdown"] = drawdown
 
         self._export_results(results)
-        return results
+
+        cumulative_return = float(cumulative_returns.iloc[-1]) if not results.empty else 0.0
+        max_drawdown = float(drawdown.min()) if not results.empty else 0.0
+
+        return {
+            "results": results,
+            "cumulative_return": cumulative_return,
+            "max_drawdown": max_drawdown,
+            "results_path": str(self.results_path),
+        }
 
     def _validate_inputs(self, df: pd.DataFrame) -> None:
         if self.price_column not in df.columns:
