@@ -38,7 +38,7 @@ def run_backtest(
     df = None
 
     if use_cache and not force_refresh:
-        df = load_cached_daily(symbol)
+        df = load_cached_daily(symbol, outputsize=effective_outputsize)
         if df is not None:
             cache_loaded = True
 
@@ -60,7 +60,7 @@ def run_backtest(
         )
 
         if use_cache:
-            save_cached_daily(symbol, df)
+            save_cached_daily(symbol, df, outputsize=effective_outputsize)
             cache_seeded = True
 
     data_source = "cache" if cache_loaded else "api"

@@ -9,24 +9,30 @@ import pandas as pd
 CACHE_DIR = Path("data_cache")
 
 
-def _parquet_path(symbol: str) -> Path:
-    return CACHE_DIR / f"{symbol.upper()}.parquet"
+def _normalized_outputsize(outputsize: Optional[str]) -> str:
+    return (outputsize or "compact").lower()
 
 
-def _csv_path(symbol: str) -> Path:
-    return CACHE_DIR / f"{symbol.upper()}.csv"
+def _parquet_path(symbol: str, outputsize: Optional[str]) -> Path:
+    suffix = _normalized_outputsize(outputsize)
+    return CACHE_DIR / f"{symbol.upper()}_{suffix}.parquet"
 
 
-def load_cached_daily(symbol: str) -> Optional[pd.DataFrame]:
-    """Load cached daily OHLCV data for the given symbol.
+def _csv_path(symbol: str, outputsize: Optional[str]) -> Path:
+    suffix = _normalized_outputsize(outputsize)
+    return CACHE_DIR / f"{symbol.upper()}_{suffix}.csv"
 
-    Returns a DataFrame indexed by date or ``None`` if no cache exists.
+
+def load_cached_daily(symbol: str, outputsize: Optional[str] = "compact") -> Optional[pd.DataFrame]:
+    """Load cached daily OHLCV data for the given symbol and output size.
+
+    Returns a DataFrame indexed by date or ``None`` if no matching cache exists.
     """
 
     CACHE_DIR.mkdir(parents=True, exist_ok=True)
 
-    parquet_file = _parquet_path(symbol)
-    csv_file = _csv_path(symbol)
+    parquet_file = _parquet_path(symbol, outputsize)
+    csv_file = _csv_path(symbol, outputsize)
 
     if parquet_file.exists():
         try:
@@ -48,13 +54,13 @@ def load_cached_daily(symbol: str) -> Optional[pd.DataFrame]:
     return None
 
 
-def save_cached_daily(symbol: str, df: pd.DataFrame) -> None:
-    """Save the given daily OHLCV DataFrame to a local cache for the symbol."""
+def save_cached_daily(symbol: str, df: pd.DataFrame, outputsize: Optional[str] = "compact") -> None:
+    """Save the given daily OHLCV DataFrame to a local cache for the symbol/output size."""
 
     CACHE_DIR.mkdir(parents=True, exist_ok=True)
 
-    parquet_file = _parquet_path(symbol)
-    csv_file = _csv_path(symbol)
+    parquet_file = _parquet_path(symbol, outputsize)
+    csv_file = _csv_path(symbol, outputsize)
 
     try:
         df.to_parquet(parquet_file)
