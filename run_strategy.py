@@ -1,6 +1,7 @@
 # run_strategy.py
 
 from ingestion.alpha_vantage_client import AlphaVantageClient
+from ingestion.cache import load_cached_daily, save_cached_daily
 from indicators.technicals import sma  # assumes sma(df, window) -> pandas.Series
 from strategy.moving_average_crossover import MovingAverageCrossoverStrategy
 from backtesting.backtester import Backtester
@@ -14,6 +15,8 @@ def run_backtest(
     outputsize: str = "compact",
     *,
     free_tier_only: bool = True,
+    use_cache: bool = True,
+    force_refresh: bool = False,
 ):
     """
     Core function that runs the full backtest and returns a results dict.
@@ -24,18 +27,43 @@ def run_backtest(
             "ALPHA_VANTAGE_API_KEY is not set. Add it to your environment or .env file."
         )
 
-    # 1. Download data
+    # 1. Download data (cache-aware)
     effective_outputsize = outputsize
     if free_tier_only and outputsize == "full":
         print("Free tier mode: forcing outputsize='compact' to limit data usage.")
         effective_outputsize = "compact"
 
-    client = AlphaVantageClient(ALPHA_VANTAGE_API_KEY)
-    df = client.get_daily(
-        symbol=symbol,
-        outputsize=effective_outputsize,
-        fallback_to_free_tier=free_tier_only,
-    )
+    cache_loaded = False
+    cache_seeded = False
+    df = None
+
+    if use_cache and not force_refresh:
+        df = load_cached_daily(symbol)
+        if df is not None:
+            cache_loaded = True
+
+    if df is None:
+        if use_cache and not force_refresh:
+            print(
+                f"No cache found for {symbol}. Fetching from Alpha Vantage and seeding cache."
+            )
+        elif use_cache and force_refresh:
+            print(f"Force refresh enabled for {symbol}. Fetching from Alpha Vantage.")
+        else:
+            print(f"Fetching live data for {symbol} from Alpha Vantage.")
+
+        client = AlphaVantageClient(ALPHA_VANTAGE_API_KEY)
+        df = client.get_daily(
+            symbol=symbol,
+            outputsize=effective_outputsize,
+            fallback_to_free_tier=free_tier_only,
+        )
+
+        if use_cache:
+            save_cached_daily(symbol, df)
+            cache_seeded = True
+
+    data_source = "cache" if cache_loaded else "api"
 
     # 2. Compute indicators needed by the strategy
     df["sma_short"] = sma(df, window=short_window)
@@ -51,6 +79,15 @@ def run_backtest(
     # 4. Run backtest
     backtester = Backtester()
     results = backtester.run(df)
+
+    results.update(
+        {
+            "data_source": data_source,
+            "cache_used": cache_loaded,
+            "cache_seeded": cache_seeded,
+            "force_refresh": force_refresh,
+        }
+    )
 
     return results
 
