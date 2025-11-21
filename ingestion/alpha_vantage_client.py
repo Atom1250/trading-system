@@ -16,7 +16,7 @@ class AlphaVantageInformation(RuntimeError):
 
 
 class AlphaVantageClient:
-    """Simple Alpha Vantage client using the TIME_SERIES_DAILY_ADJUSTED endpoint."""
+    """Simple Alpha Vantage client using the TIME_SERIES_DAILY endpoint."""
 
     BASE_URL = "https://www.alphavantage.co/query"
 
@@ -55,44 +55,31 @@ class AlphaVantageClient:
         *,
         fallback_to_free_tier: bool = True,
     ) -> pd.DataFrame:
-        """Fetch daily adjusted time series for the given symbol.
+        """Fetch daily time series for the given symbol.
 
         Args:
             symbol: Ticker symbol to request.
             output_size: Alpha Vantage output size parameter ("compact" or "full").
             outputsize: Deprecated alias for ``output_size`` to preserve compatibility.
-            fallback_to_free_tier: When True, fallback to the free Daily endpoint if
-                Alpha Vantage indicates the adjusted series is premium for the key.
+            fallback_to_free_tier: Reserved for compatibility with earlier callers;
+                TIME_SERIES_DAILY is already free-tier.
 
         Returns:
-            A pandas DataFrame indexed by date with OHLCV and adjusted close columns.
+            A pandas DataFrame indexed by date with OHLCV columns.
         """
 
         effective_outputsize = outputsize or output_size
 
         params = {
-            "function": "TIME_SERIES_DAILY_ADJUSTED",
+            "function": "TIME_SERIES_DAILY",
             "symbol": symbol,
             "apikey": self.api_key,
             "datatype": "json",
             "outputsize": effective_outputsize,
         }
 
-        try:
-            data = self._get(params)
-            time_series_key = "Time Series (Daily)"
-        except AlphaVantageInformation as exc:
-            info_lower = exc.message.lower()
-            if fallback_to_free_tier and "premium" in info_lower:
-                print(
-                    "Falling back to TIME_SERIES_DAILY to stay within the free tier "
-                    "(adjusted series not available)."
-                )
-                params["function"] = "TIME_SERIES_DAILY"
-                data = self._get(params)
-                time_series_key = "Time Series (Daily)"
-            else:
-                raise
+        data = self._get(params)
+        time_series_key = "Time Series (Daily)"
 
         if time_series_key not in data:
             raise ValueError("Unexpected response format from Alpha Vantage")
@@ -106,10 +93,7 @@ class AlphaVantageClient:
                     "high": float(values["2. high"]),
                     "low": float(values["3. low"]),
                     "close": float(values["4. close"]),
-                    "adjusted_close": float(values["5. adjusted close"]),
-                    "volume": int(values["6. volume"]),
-                    "dividend_amount": float(values["7. dividend amount"]),
-                    "split_coefficient": float(values["8. split coefficient"]),
+                    "volume": int(values["5. volume"]),
                 }
             )
 
