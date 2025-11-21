@@ -100,3 +100,22 @@ class AlphaVantageClient:
         df.set_index("date", inplace=True)
         df.sort_index(inplace=True)
         return df
+
+    def get_daily_multiple(
+        self, symbols: list[str], output_size: str = "compact"
+    ) -> dict[str, pd.DataFrame]:
+        """Fetch daily data for multiple symbols.
+
+        Loops over each symbol, reusing :meth:`get_daily` and aggregating results.
+        Errors for an individual symbol are logged and skipped so other requests
+        can proceed.
+        """
+
+        results: dict[str, pd.DataFrame] = {}
+        for symbol in symbols:
+            try:
+                results[symbol] = self.get_daily(symbol, output_size=output_size)
+            except Exception as exc:  # noqa: BLE001 - surface per-symbol errors
+                print(f"Failed to fetch {symbol}: {exc}")
+
+        return results

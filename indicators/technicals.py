@@ -4,6 +4,9 @@ from __future__ import annotations
 import pandas as pd
 
 
+__all__ = ["sma", "ema", "rsi", "macd", "bollinger_bands"]
+
+
 def sma(df: pd.DataFrame, window: int = 14, column: str = "close") -> pd.Series:
     """Calculate the Simple Moving Average (SMA).
 
@@ -108,11 +111,19 @@ def bollinger_bands(
     Adds ``bb_middle``, ``bb_upper``, and ``bb_lower`` columns to the DataFrame and
     returns the DataFrame.
     """
-    rolling_mean = df[column].rolling(window=window, min_periods=window).mean()
-    rolling_std = df[column].rolling(window=window, min_periods=window).std()
+    if column not in df.columns:
+        raise KeyError(f"Column '{column}' not found in DataFrame.")
+
+    rolling = df[column].rolling(window=window, min_periods=window)
+    rolling_mean = rolling.mean()
+    rolling_std = rolling.std()
 
     df["bb_middle"] = rolling_mean
     df["bb_upper"] = rolling_mean + num_std * rolling_std
     df["bb_lower"] = rolling_mean - num_std * rolling_std
+
+    df[["bb_middle", "bb_upper", "bb_lower"]] = df[
+        ["bb_middle", "bb_upper", "bb_lower"]
+    ].astype(float)
 
     return df
