@@ -62,9 +62,10 @@ def main():
     """
     print("=== Trading System Runner ===")
 
-    symbol = input("Enter symbol (e.g. AAPL): ").strip().upper()
-    if not symbol:
-        print("Symbol is required.")
+    raw_symbols = input("Enter symbol or comma-separated symbols (e.g. AAPL or AAPL,MSFT): ")
+    symbols = [s.strip().upper() for s in raw_symbols.split(",") if s.strip()]
+    if not symbols:
+        print("At least one symbol is required.")
         return
 
     try:
@@ -86,20 +87,48 @@ def main():
         outputsize = "compact"
 
     print("\nRunning backtest...")
-    results = run_backtest(symbol, short_window, long_window, outputsize)
 
-    # Expected keys in results: 'cumulative_return', 'max_drawdown'
-    print("\n=== Backtest Summary ===")
-    print(f"Symbol: {symbol}")
-    print(f"Short window: {short_window}, Long window: {long_window}")
-    if "cumulative_return" in results:
-        print(f"Cumulative return: {results['cumulative_return']:.2%}")
-    if "max_drawdown" in results:
-        print(f"Max drawdown: {results['max_drawdown']:.2%}")
-    if "results_path" in results:
-        print(f"Detailed results saved to: {results['results_path']}")
+    if len(symbols) == 1:
+        symbol = symbols[0]
+        results = run_backtest(symbol, short_window, long_window, outputsize)
+
+        # Expected keys in results: 'cumulative_return', 'max_drawdown'
+        print("\n=== Backtest Summary ===")
+        print(f"Symbol: {symbol}")
+        print(f"Short window: {short_window}, Long window: {long_window}")
+        if "cumulative_return" in results:
+            print(f"Cumulative return: {results['cumulative_return']:.2%}")
+        if "max_drawdown" in results:
+            print(f"Max drawdown: {results['max_drawdown']:.2%}")
+        if "results_path" in results:
+            print(f"Detailed results saved to: {results['results_path']}")
+        else:
+            print(
+                "Detailed results may be in reports/results.csv (depending on your Backtester implementation)."
+            )
     else:
-        print("Detailed results may be in reports/results.csv (depending on your Backtester implementation).")
+        print(f"Running backtests for {len(symbols)} symbols...\n")
+        for symbol in symbols:
+            print(f"--- {symbol} ---")
+            try:
+                results = run_backtest(symbol, short_window, long_window, outputsize)
+            except Exception as exc:  # surface per-symbol errors without stopping all
+                print(f"Error running backtest for {symbol}: {exc}")
+                print()
+                continue
+
+            print(f"Short window: {short_window}, Long window: {long_window}")
+            if "cumulative_return" in results:
+                print(f"Cumulative return: {results['cumulative_return']:.2%}")
+            if "max_drawdown" in results:
+                print(f"Max drawdown: {results['max_drawdown']:.2%}")
+            if "results_path" in results:
+                print(f"Detailed results saved to: {results['results_path']}")
+            else:
+                print(
+                    "Detailed results may be in reports/results.csv (depending on your Backtester implementation)."
+                )
+            print()
 
 
 if __name__ == "__main__":
