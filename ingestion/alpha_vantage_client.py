@@ -52,7 +52,6 @@ class AlphaVantageClient:
         output_size: str = "compact",
         *,
         outputsize: Optional[str] = None,
-        *,
         fallback_to_free_tier: bool = True,
     ) -> pd.DataFrame:
         """Fetch daily time series for the given symbol.
