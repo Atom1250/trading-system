@@ -98,3 +98,21 @@ def macd(
     df["MACD_hist"] = macd_hist
 
     return df["MACD_hist"]
+
+
+def bollinger_bands(
+    df: pd.DataFrame, window: int = 20, num_std: float = 2.0, column: str = "close"
+) -> pd.DataFrame:
+    """Calculate Bollinger Bands on the ``column`` price.
+
+    Adds ``bb_middle``, ``bb_upper``, and ``bb_lower`` columns to the DataFrame and
+    returns the DataFrame.
+    """
+    rolling_mean = df[column].rolling(window=window, min_periods=window).mean()
+    rolling_std = df[column].rolling(window=window, min_periods=window).std()
+
+    df["bb_middle"] = rolling_mean
+    df["bb_upper"] = rolling_mean + num_std * rolling_std
+    df["bb_lower"] = rolling_mean - num_std * rolling_std
+
+    return df
