@@ -1,0 +1,22 @@
+# Environment and secrets
+.env
+.env.*
+!.env.example
+
+# Python cache and virtual environments
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.envrc
+venv/
+.env.local
+
+# Data and reports generated artifacts
+reports/*.csv
+data/*
+data_cache/
+
+# OS files
+.DS_Store
+Thumbs.db
