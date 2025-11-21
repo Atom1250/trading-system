@@ -47,4 +47,14 @@ class MovingAverageCrossoverStrategy:
         df.loc[df[short_col] < df[long_col], "signal"] = -1
 
         df["positions"] = df["signal"].diff().fillna(0)
+
+        band_columns = {"bb_middle", "bb_upper", "bb_lower"}
+        if band_columns.issubset(df.columns):
+            df["price_above_upper_band"] = (
+                df[price_column].gt(df["bb_upper"]).fillna(False)
+            )
+            df["price_below_lower_band"] = (
+                df[price_column].lt(df["bb_lower"]).fillna(False)
+            )
+
         return df
