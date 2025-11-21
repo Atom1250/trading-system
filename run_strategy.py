@@ -19,6 +19,11 @@ def run_backtest(
     Core function that runs the full backtest and returns a results dict.
     This is called by both the console UI and the Streamlit UI.
     """
+    if not ALPHA_VANTAGE_API_KEY:
+        raise RuntimeError(
+            "ALPHA_VANTAGE_API_KEY is not set. Add it to your environment or .env file."
+        )
+
     # 1. Download data
     effective_outputsize = outputsize
     if free_tier_only and outputsize == "full":
