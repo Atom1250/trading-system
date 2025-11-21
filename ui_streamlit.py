@@ -20,13 +20,24 @@ if st.button("Run backtest"):
     elif not symbol.strip():
         st.error("Symbol is required.")
     else:
-        with st.spinner("Running backtest..."):
-            results = run_backtest(
-                symbol=symbol.strip().upper(),
-                short_window=int(short_window),
-                long_window=int(long_window),
-                outputsize=outputsize,
+        requested_outputsize = outputsize
+        if requested_outputsize == "full":
+            st.info(
+                "Free tier mode is enabled. Requests for 'full' output will fall back to "
+                "'compact' to avoid premium endpoints."
             )
+
+        try:
+            with st.spinner("Running backtest..."):
+                results = run_backtest(
+                    symbol=symbol.strip().upper(),
+                    short_window=int(short_window),
+                    long_window=int(long_window),
+                    outputsize=requested_outputsize,
+                )
+        except Exception as exc:  # Surface Alpha Vantage errors clearly in the UI
+            st.error(f"Backtest failed: {exc}")
+            st.stop()
 
         st.success("Backtest complete!")
 

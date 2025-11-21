@@ -7,14 +7,30 @@ from backtesting.backtester import Backtester
 from config.settings import ALPHA_VANTAGE_API_KEY
 
 
-def run_backtest(symbol: str, short_window: int, long_window: int, outputsize: str = "compact"):
+def run_backtest(
+    symbol: str,
+    short_window: int,
+    long_window: int,
+    outputsize: str = "compact",
+    *,
+    free_tier_only: bool = True,
+):
     """
     Core function that runs the full backtest and returns a results dict.
     This is called by both the console UI and the Streamlit UI.
     """
     # 1. Download data
+    effective_outputsize = outputsize
+    if free_tier_only and outputsize == "full":
+        print("Free tier mode: forcing outputsize='compact' to limit data usage.")
+        effective_outputsize = "compact"
+
     client = AlphaVantageClient(ALPHA_VANTAGE_API_KEY)
-    df = client.get_daily(symbol=symbol, outputsize=outputsize)
+    df = client.get_daily(
+        symbol=symbol,
+        outputsize=effective_outputsize,
+        fallback_to_free_tier=free_tier_only,
+    )
 
     # 2. Compute indicators needed by the strategy
     df["sma_short"] = sma(df, window=short_window)

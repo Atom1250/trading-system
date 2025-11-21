@@ -7,6 +7,14 @@ import pandas as pd
 import requests
 
 
+class AlphaVantageInformation(RuntimeError):
+    """Raised when Alpha Vantage returns an informational response."""
+
+    def __init__(self, message: str) -> None:
+        super().__init__(message)
+        self.message = message
+
+
 class AlphaVantageClient:
     """Simple Alpha Vantage client using the TIME_SERIES_DAILY_ADJUSTED endpoint."""
 
@@ -32,8 +40,9 @@ class AlphaVantageClient:
 
         if "Information" in data:
             # Other informational response (often related to API key usage)
-            print(f"Alpha Vantage message: {data['Information']}")
-            raise RuntimeError(f"Alpha Vantage information: {data['Information']}")
+            message = data["Information"]
+            print(f"Alpha Vantage message: {message}")
+            raise AlphaVantageInformation(message)
 
         return data
 
@@ -43,6 +52,8 @@ class AlphaVantageClient:
         output_size: str = "compact",
         *,
         outputsize: Optional[str] = None,
+        *,
+        fallback_to_free_tier: bool = True,
     ) -> pd.DataFrame:
         """Fetch daily adjusted time series for the given symbol.
 
@@ -50,6 +61,8 @@ class AlphaVantageClient:
             symbol: Ticker symbol to request.
             output_size: Alpha Vantage output size parameter ("compact" or "full").
             outputsize: Deprecated alias for ``output_size`` to preserve compatibility.
+            fallback_to_free_tier: When True, fallback to the free Daily endpoint if
+                Alpha Vantage indicates the adjusted series is premium for the key.
 
         Returns:
             A pandas DataFrame indexed by date with OHLCV and adjusted close columns.
@@ -65,8 +78,22 @@ class AlphaVantageClient:
             "outputsize": effective_outputsize,
         }
 
-        data = self._get(params)
-        time_series_key = "Time Series (Daily)"
+        try:
+            data = self._get(params)
+            time_series_key = "Time Series (Daily)"
+        except AlphaVantageInformation as exc:
+            info_lower = exc.message.lower()
+            if fallback_to_free_tier and "premium" in info_lower:
+                print(
+                    "Falling back to TIME_SERIES_DAILY to stay within the free tier "
+                    "(adjusted series not available)."
+                )
+                params["function"] = "TIME_SERIES_DAILY"
+                data = self._get(params)
+                time_series_key = "Time Series (Daily)"
+            else:
+                raise
+
         if time_series_key not in data:
             raise ValueError("Unexpected response format from Alpha Vantage")
 
