@@ -4,6 +4,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import importlib.util
+import sys
 import logging
 import matplotlib
 
@@ -13,23 +14,25 @@ import pandas as pd
 
 logger = logging.getLogger(__name__)
 
+project_root = Path(__file__).resolve().parent.parent
+shadow_dir = project_root / "backtesting"
+
+# If a local ``backtesting/`` directory exists, reorder ``sys.path`` so the
+# external dependency (site-packages) is preferred ahead of the project root.
+if shadow_dir.exists():
+    root_str = str(project_root)
+    if root_str in sys.path:
+        sys.path.remove(root_str)
+        sys.path.append(root_str)
+    logger.warning(
+        "Found local 'backtesting' directory at %s; prioritizing external package from site-packages.",
+        shadow_dir,
+    )
+
 _backtesting_spec = importlib.util.find_spec("backtesting")
 if _backtesting_spec is None or _backtesting_spec.origin is None:
     raise ImportError(
         "The external 'backtesting' package is required. Install it with 'pip install backtesting'."
-    )
-
-project_root = Path(__file__).resolve().parent.parent
-origin_path = Path(_backtesting_spec.origin).resolve()
-shadow_dir = project_root / "backtesting"
-
-# Only treat as a conflict when a real in-repo package is shadowing the dependency,
-# not when the library is installed into a virtualenv living under the project
-# (e.g., .venv/lib/pythonX/site-packages/backtesting/__init__.py).
-if shadow_dir.exists() and origin_path.is_relative_to(shadow_dir):
-    raise ImportError(
-        "Detected a local 'backtesting' package shadowing the external 'backtesting.py' dependency. "
-        "Please remove or rename the local package so imports resolve to the installed library."
     )
 
 from backtesting import Backtest, Strategy
