@@ -1,0 +1,8 @@
+default_strategy: moving_average_crossover
+strategies:
+  moving_average_crossover:
+    module: strategy.moving_average_crossover
+    class: MovingAverageCrossoverStrategy
+    params:
+      short_window: 20
+      long_window: 50
