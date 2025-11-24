@@ -1,4 +1,4 @@
-"""Vectorized backtesting engine for trading strategies."""
+"""Backtester that routes execution through ``backtesting.py``."""
 from __future__ import annotations
 
 from pathlib import Path
@@ -8,23 +8,28 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import pandas as pd
+from backtesting import Backtest, Strategy
 
 
 class Backtester:
-    """Run a vectorized backtest on price data and strategy signals."""
+    """Run backtests using the ``backtesting.py`` engine."""
 
     def __init__(
         self,
         price_column: str = "close",
         signal_column: str = "signal",
         results_path: str | Path = "reports/results.csv",
+        initial_cash: float = 100_000.0,
+        commission: float = 0.0,
     ) -> None:
         self.price_column = price_column
         self.signal_column = signal_column
         self.results_path = Path(results_path)
+        self.initial_cash = initial_cash
+        self.commission = commission
 
     def run(self, df: pd.DataFrame) -> dict[str, pd.DataFrame | float | str]:
-        """Execute the backtest, export results, and compute summary metrics.
+        """Execute the backtest via ``backtesting.py`` and export results.
 
         Args:
             df: Price DataFrame with columns for price and strategy signals.
@@ -35,28 +40,63 @@ class Backtester:
         """
         self._validate_inputs(df)
 
-        prices = df[self.price_column]
-        raw_returns = prices.pct_change().fillna(0)
+        bt_df = self._prepare_backtesting_frame(df)
+        signal_values = df[self.signal_column].fillna(0).values
 
-        positions = df[self.signal_column].shift(1).fillna(0)
-        strategy_returns = positions * raw_returns
+        class PrecomputedSignalStrategy(Strategy):
+            def init(self) -> None:
+                self.signal = self.I(lambda: signal_values, name="signal")
 
-        equity_curve = (1 + strategy_returns).cumprod()
-        cumulative_returns = equity_curve - 1
+            def next(self) -> None:  # pragma: no cover - thin wrapper for backtesting.py
+                sig = self.signal[-1]
 
-        running_max = equity_curve.cummax()
-        drawdown = (equity_curve - running_max) / running_max.replace(0, pd.NA)
+                if sig > 0:
+                    if not self.position.is_long:
+                        if self.position:
+                            self.position.close()
+                        self.buy(size=1)
+                elif sig < 0:
+                    if not self.position.is_short:
+                        if self.position:
+                            self.position.close()
+                        self.sell(size=1)
+                else:
+                    if self.position:
+                        self.position.close()
+
+        bt = Backtest(
+            bt_df,
+            PrecomputedSignalStrategy,
+            cash=self.initial_cash,
+            commission=self.commission,
+            exclusive_orders=True,
+            hedging=False,
+        )
+
+        stats = bt.run()
+        equity_curve = stats["_equity_curve"].copy()
+
+        trimmed_curve = equity_curve.iloc[-len(df):]
+        trimmed_curve.index = df.index[-len(trimmed_curve):]
 
         results = df.copy()
-        results["returns"] = raw_returns
-        results["strategy_returns"] = strategy_returns
-        results["cumulative_returns"] = cumulative_returns
-        results["drawdown"] = drawdown
+        results["equity"] = trimmed_curve["Equity"].values
+        results["strategy_returns"] = trimmed_curve["Equity"].pct_change().fillna(0).values
+        results["cumulative_returns"] = (
+            trimmed_curve["Equity"].div(trimmed_curve["Equity"].iloc[0]).sub(1).values
+        )
+        if "DrawdownPct" in trimmed_curve.columns:
+            results["drawdown"] = trimmed_curve["DrawdownPct"].div(100).values
+        else:
+            running_max = trimmed_curve["Equity"].cummax()
+            results["drawdown"] = (
+                trimmed_curve["Equity"] - running_max
+            ) / running_max.replace(0, pd.NA)
 
         self._export_results(results)
 
-        cumulative_return = float(cumulative_returns.iloc[-1]) if not results.empty else 0.0
-        max_drawdown = float(drawdown.min()) if not results.empty else 0.0
+        cumulative_return = float(stats.get("Return [%]", 0.0)) / 100.0
+        max_drawdown = float(stats.get("Max. Drawdown [%]", 0.0)) / 100.0
 
         return {
             "results": results,
@@ -130,6 +170,25 @@ class Backtester:
             raise KeyError(f"Column '{self.price_column}' not found in DataFrame.")
         if self.signal_column not in df.columns:
             raise KeyError(f"Column '{self.signal_column}' not found in DataFrame.")
+
+        for col in ("open", "high", "low", "volume"):
+            if col not in df.columns:
+                raise KeyError(f"Column '{col}' not found in DataFrame.")
+
+    def _prepare_backtesting_frame(self, df: pd.DataFrame) -> pd.DataFrame:
+        """Prepare OHLCV data for consumption by ``backtesting.py``."""
+
+        bt_df = pd.DataFrame(
+            {
+                "Open": df["open"],
+                "High": df["high"],
+                "Low": df["low"],
+                "Close": df[self.price_column],
+                "Volume": df["volume"],
+            },
+            index=df.index,
+        )
+        return bt_df
 
     def _export_results(self, results: pd.DataFrame) -> None:
         self.results_path.parent.mkdir(parents=True, exist_ok=True)
