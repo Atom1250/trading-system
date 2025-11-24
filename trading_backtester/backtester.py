@@ -20,7 +20,13 @@ if _backtesting_spec is None or _backtesting_spec.origin is None:
     )
 
 project_root = Path(__file__).resolve().parent.parent
-if Path(_backtesting_spec.origin).resolve().is_relative_to(project_root):
+origin_path = Path(_backtesting_spec.origin).resolve()
+shadow_dir = project_root / "backtesting"
+
+# Only treat as a conflict when a real in-repo package is shadowing the dependency,
+# not when the library is installed into a virtualenv living under the project
+# (e.g., .venv/lib/pythonX/site-packages/backtesting/__init__.py).
+if shadow_dir.exists() and origin_path.is_relative_to(shadow_dir):
     raise ImportError(
         "Detected a local 'backtesting' package shadowing the external 'backtesting.py' dependency. "
         "Please remove or rename the local package so imports resolve to the installed library."
