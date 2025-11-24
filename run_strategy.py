@@ -31,21 +31,21 @@ def run_backtest(
     This is called by both the console UI and the Streamlit UI.
     """
     # 1. Download data (cache-aware)
-    effective_outputsize = outputsize
-    if free_tier_only and outputsize == "full":
-        logger.info("Free tier mode: forcing outputsize='compact' to limit data usage.")
-        effective_outputsize = "compact"
-
     cache_loaded = False
     cache_seeded = False
     df = None
 
     if use_cache and not force_refresh:
-        df = load_cached_daily(symbol, outputsize=effective_outputsize)
+        df = load_cached_daily(symbol, outputsize=outputsize)
         if df is not None:
             cache_loaded = True
 
     if df is None:
+        effective_outputsize = outputsize
+        if free_tier_only and outputsize == "full":
+            logger.info("Free tier mode: forcing outputsize='compact' to limit data usage.")
+            effective_outputsize = "compact"
+
         if use_cache and not force_refresh:
             logger.info(
                 "No cache found for %s. Fetching from Alpha Vantage and seeding cache.",
