@@ -3,16 +3,30 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import importlib.util
 import logging
 import matplotlib
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import pandas as pd
-from backtesting import Backtest, Strategy
-
 
 logger = logging.getLogger(__name__)
+
+_backtesting_spec = importlib.util.find_spec("backtesting")
+if _backtesting_spec is None or _backtesting_spec.origin is None:
+    raise ImportError(
+        "The external 'backtesting' package is required. Install it with 'pip install backtesting'."
+    )
+
+project_root = Path(__file__).resolve().parent.parent
+if Path(_backtesting_spec.origin).resolve().is_relative_to(project_root):
+    raise ImportError(
+        "Detected a local 'backtesting' package shadowing the external 'backtesting.py' dependency. "
+        "Please remove or rename the local package so imports resolve to the installed library."
+    )
+
+from backtesting import Backtest, Strategy
 
 
 class Backtester:
