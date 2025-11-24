@@ -10,8 +10,8 @@ import yaml
 from ingestion.alpha_vantage_client import AlphaVantageClient
 from ingestion.cache import load_cached_daily, save_cached_daily
 from indicators.technicals import sma  # assumes sma(df, window) -> pandas.Series
-from backtesting.backtester import Backtester
-from backtesting.portfolio_backtester import PortfolioBacktester
+from trading_backtester.backtester import Backtester
+from trading_backtester.portfolio_backtester import PortfolioBacktester
 from config.settings import ALPHA_VANTAGE_API_KEY, setup_logging
 
 
