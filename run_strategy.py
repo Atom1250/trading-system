@@ -1,5 +1,7 @@
 # run_strategy.py
 
+import logging
+
 import pandas as pd
 
 from ingestion.alpha_vantage_client import AlphaVantageClient
@@ -8,7 +10,10 @@ from indicators.technicals import sma  # assumes sma(df, window) -> pandas.Serie
 from strategy.moving_average_crossover import MovingAverageCrossoverStrategy
 from backtesting.backtester import Backtester
 from backtesting.portfolio_backtester import PortfolioBacktester
-from config.settings import ALPHA_VANTAGE_API_KEY
+from config.settings import ALPHA_VANTAGE_API_KEY, setup_logging
+
+
+logger = logging.getLogger(__name__)
 
 
 def run_backtest(
@@ -33,7 +38,7 @@ def run_backtest(
     # 1. Download data (cache-aware)
     effective_outputsize = outputsize
     if free_tier_only and outputsize == "full":
-        print("Free tier mode: forcing outputsize='compact' to limit data usage.")
+        logger.info("Free tier mode: forcing outputsize='compact' to limit data usage.")
         effective_outputsize = "compact"
 
     cache_loaded = False
@@ -47,13 +52,14 @@ def run_backtest(
 
     if df is None:
         if use_cache and not force_refresh:
-            print(
-                f"No cache found for {symbol}. Fetching from Alpha Vantage and seeding cache."
+            logger.info(
+                "No cache found for %s. Fetching from Alpha Vantage and seeding cache.",
+                symbol,
             )
         elif use_cache and force_refresh:
-            print(f"Force refresh enabled for {symbol}. Fetching from Alpha Vantage.")
+            logger.info("Force refresh enabled for %s. Fetching from Alpha Vantage.", symbol)
         else:
-            print(f"Fetching live data for {symbol} from Alpha Vantage.")
+            logger.info("Fetching live data for %s from Alpha Vantage.", symbol)
 
         client = AlphaVantageClient(ALPHA_VANTAGE_API_KEY)
         df = client.get_daily(
@@ -88,7 +94,7 @@ def run_backtest(
         plot_path = backtester.plot_results(df, symbol=symbol)
         results["plot_path"] = plot_path
     except Exception as exc:
-        print(f"Warning: failed to generate plot for {symbol}: {exc}")
+        logger.warning("Failed to generate plot for %s: %s", symbol, exc)
 
     results.update(
         {
@@ -107,104 +113,104 @@ def main():
     Simple console-based UI that asks the user for inputs.
     This replaces the strict command-line-argument approach that caused the error.
     """
-    print("=== Trading System Runner ===")
+    setup_logging()
+    logger.info("=== Trading System Runner ===")
 
     raw_symbols = input("Enter symbol or comma-separated symbols (e.g. AAPL or AAPL,MSFT): ")
     symbols = [s.strip().upper() for s in raw_symbols.split(",") if s.strip()]
     if not symbols:
-        print("At least one symbol is required.")
+        logger.error("At least one symbol is required.")
         return
 
     try:
         short_window = int(input("Enter SHORT moving average window (e.g. 20): ").strip())
         long_window = int(input("Enter LONG moving average window (e.g. 50): ").strip())
     except ValueError:
-        print("Short and long windows must be integers.")
+        logger.error("Short and long windows must be integers.")
         return
 
     if short_window >= long_window:
-        print("Short window must be smaller than long window.")
+        logger.error("Short window must be smaller than long window.")
         return
 
     outputsize = input("Output size 'compact' or 'full' [compact]: ").strip().lower()
     if outputsize == "":
         outputsize = "compact"
     if outputsize not in ("compact", "full"):
-        print("Invalid output size, defaulting to 'compact'.")
+        logger.warning("Invalid output size, defaulting to 'compact'.")
         outputsize = "compact"
 
-    print("\nRunning backtest...")
+    logger.info("Running backtest...")
 
     if len(symbols) == 1:
         symbol = symbols[0]
         results = run_backtest(symbol, short_window, long_window, outputsize)
 
         # Expected keys in results: 'cumulative_return', 'max_drawdown'
-        print("\n=== Backtest Summary ===")
-        print(f"Symbol: {symbol}")
-        print(f"Short window: {short_window}, Long window: {long_window}")
+        logger.info("\n=== Backtest Summary ===")
+        logger.info("Symbol: %s", symbol)
+        logger.info("Short window: %s, Long window: %s", short_window, long_window)
         if "cumulative_return" in results:
-            print(f"Cumulative return: {results['cumulative_return']:.2%}")
+            logger.info("Cumulative return: %.2f%%", results["cumulative_return"] * 100)
         if "max_drawdown" in results:
-            print(f"Max drawdown: {results['max_drawdown']:.2%}")
+            logger.info("Max drawdown: %.2f%%", results["max_drawdown"] * 100)
         if "results_path" in results:
-            print(f"Detailed results saved to: {results['results_path']}")
+            logger.info("Detailed results saved to: %s", results["results_path"])
         else:
-            print(
+            logger.info(
                 "Detailed results may be in reports/results.csv (depending on your Backtester implementation)."
             )
         plot_path = results.get("plot_path")
         if plot_path:
-            print(f"Backtest chart saved to: {plot_path}")
+            logger.info("Backtest chart saved to: %s", plot_path)
         else:
-            print("No backtest chart generated.")
+            logger.info("No backtest chart generated.")
     else:
-        print(f"Running backtests for {len(symbols)} symbols...\n")
+        logger.info("Running backtests for %s symbols...", len(symbols))
         portfolio_inputs: dict[str, pd.DataFrame] = {}
         for symbol in symbols:
-            print(f"--- {symbol} ---")
+            logger.info("--- %s ---", symbol)
             try:
                 results = run_backtest(symbol, short_window, long_window, outputsize)
             except Exception as exc:  # surface per-symbol errors without stopping all
-                print(f"Error running backtest for {symbol}: {exc}")
-                print()
+                logger.error("Error running backtest for %s: %s", symbol, exc)
                 continue
 
-            print(f"Short window: {short_window}, Long window: {long_window}")
+            logger.info("Short window: %s, Long window: %s", short_window, long_window)
             if "cumulative_return" in results:
-                print(f"Cumulative return: {results['cumulative_return']:.2%}")
+                logger.info("Cumulative return: %.2f%%", results["cumulative_return"] * 100)
             if "max_drawdown" in results:
-                print(f"Max drawdown: {results['max_drawdown']:.2%}")
+                logger.info("Max drawdown: %.2f%%", results["max_drawdown"] * 100)
             if "results_path" in results:
-                print(f"Detailed results saved to: {results['results_path']}")
+                logger.info("Detailed results saved to: %s", results["results_path"])
             else:
-                print(
+                logger.info(
                     "Detailed results may be in reports/results.csv (depending on your Backtester implementation)."
                 )
-            print()
 
             if "results" in results:
                 portfolio_inputs[symbol] = results["results"]
 
         if portfolio_inputs:
-            print("=== Portfolio Summary ===")
+            logger.info("=== Portfolio Summary ===")
             try:
                 portfolio_backtester = PortfolioBacktester()
                 portfolio_results = portfolio_backtester.run(portfolio_inputs)
             except Exception as exc:
-                print(f"Error running portfolio backtest: {exc}")
+                logger.error("Error running portfolio backtest: %s", exc)
             else:
-                print(
-                    f"Portfolio cumulative return: {portfolio_results['cumulative_return']:.2%}"
+                logger.info(
+                    "Portfolio cumulative return: %.2f%%",
+                    portfolio_results["cumulative_return"] * 100,
                 )
-                print(
-                    f"Portfolio max drawdown: {portfolio_results['max_drawdown']:.2%}"
+                logger.info(
+                    "Portfolio max drawdown: %.2f%%",
+                    portfolio_results["max_drawdown"] * 100,
                 )
                 if "results_path" in portfolio_results:
-                    print(
-                        f"Portfolio results saved to: {portfolio_results['results_path']}"
+                    logger.info(
+                        "Portfolio results saved to: %s", portfolio_results["results_path"]
                     )
-            print()
 
 
 if __name__ == "__main__":

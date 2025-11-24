@@ -3,12 +3,16 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import logging
 import matplotlib
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import pandas as pd
 from backtesting import Backtest, Strategy
+
+
+logger = logging.getLogger(__name__)
 
 
 class Backtester:
@@ -94,6 +98,8 @@ class Backtester:
             ) / running_max.replace(0, pd.NA)
 
         self._export_results(results)
+
+        logger.info("Backtest completed; results exported to %s", self.results_path)
 
         cumulative_return = float(stats.get("Return [%]", 0.0)) / 100.0
         max_drawdown = float(stats.get("Max. Drawdown [%]", 0.0)) / 100.0

@@ -4,7 +4,11 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Dict
 
+import logging
 import pandas as pd
+
+
+logger = logging.getLogger(__name__)
 
 
 class PortfolioBacktester:
@@ -59,6 +63,8 @@ class PortfolioBacktester:
         )
 
         self._export_results(results)
+
+        logger.info("Portfolio backtest completed; results exported to %s", self.results_path)
 
         cumulative_return = float(cumulative_returns.iloc[-1]) if not results.empty else 0.0
         max_drawdown = float(drawdown.min()) if not results.empty else 0.0
