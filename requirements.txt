@@ -1,0 +1,8 @@
+pandas
+numpy
+requests
+matplotlib
+streamlit
+python-dotenv
+backtesting
+PyYAML
