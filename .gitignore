@@ -16,6 +16,7 @@ venv/
 reports/*.csv
 data/*
 data_cache/
+logs/
 
 # OS files
 .DS_Store
