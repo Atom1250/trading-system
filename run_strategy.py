@@ -102,21 +102,23 @@ def run_backtest(
     df = None
     active_strategy_name = strategy_name
 
-    fallback_outputsize = "compact" if free_tier_only and outputsize == "full" else None
+    cache_outputsize_candidates = [outputsize]
+    if free_tier_only and outputsize == "full":
+        cache_outputsize_candidates.append("compact")
 
     if use_cache and not force_refresh:
-        df = load_cached_daily(symbol, outputsize=outputsize)
-        if df is not None:
-            cache_loaded = True
-        elif fallback_outputsize:
-            df = load_cached_daily(symbol, outputsize=fallback_outputsize)
+        for candidate_outputsize in cache_outputsize_candidates:
+            df = load_cached_daily(symbol, outputsize=candidate_outputsize)
             if df is not None:
                 cache_loaded = True
-                logger.info(
-                    "Using cached data for %s with fallback outputsize='%s' due to free-tier mode.",
-                    symbol,
-                    fallback_outputsize,
-                )
+                outputsize = candidate_outputsize
+                if candidate_outputsize != cache_outputsize_candidates[0]:
+                    logger.info(
+                        "Using cached data for %s with fallback outputsize='%s' due to free-tier mode.",
+                        symbol,
+                        candidate_outputsize,
+                    )
+                break
 
     if df is None:
         effective_outputsize = outputsize
