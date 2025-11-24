@@ -83,6 +83,13 @@ def run_backtest(
     backtester = Backtester()
     results = backtester.run(df)
 
+    plot_path = None
+    try:
+        plot_path = backtester.plot_results(df, symbol=symbol)
+        results["plot_path"] = plot_path
+    except Exception as exc:
+        print(f"Warning: failed to generate plot for {symbol}: {exc}")
+
     results.update(
         {
             "data_source": data_source,
@@ -146,6 +153,11 @@ def main():
             print(
                 "Detailed results may be in reports/results.csv (depending on your Backtester implementation)."
             )
+        plot_path = results.get("plot_path")
+        if plot_path:
+            print(f"Backtest chart saved to: {plot_path}")
+        else:
+            print("No backtest chart generated.")
     else:
         print(f"Running backtests for {len(symbols)} symbols...\n")
         portfolio_inputs: dict[str, pd.DataFrame] = {}
