@@ -30,11 +30,6 @@ def run_backtest(
     Core function that runs the full backtest and returns a results dict.
     This is called by both the console UI and the Streamlit UI.
     """
-    if not ALPHA_VANTAGE_API_KEY:
-        raise RuntimeError(
-            "ALPHA_VANTAGE_API_KEY is not set. Add it to your environment or .env file."
-        )
-
     # 1. Download data (cache-aware)
     effective_outputsize = outputsize
     if free_tier_only and outputsize == "full":
@@ -60,6 +55,12 @@ def run_backtest(
             logger.info("Force refresh enabled for %s. Fetching from Alpha Vantage.", symbol)
         else:
             logger.info("Fetching live data for %s from Alpha Vantage.", symbol)
+
+        if not ALPHA_VANTAGE_API_KEY:
+            raise RuntimeError(
+                "ALPHA_VANTAGE_API_KEY is not set and no cached data is available. "
+                "Add it to your environment or .env file to fetch data."
+            )
 
         client = AlphaVantageClient(ALPHA_VANTAGE_API_KEY)
         df = client.get_daily(
