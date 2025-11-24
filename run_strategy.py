@@ -1,19 +1,84 @@
 # run_strategy.py
 
+import importlib
 import logging
+from typing import Any, Dict
 
 import pandas as pd
+import yaml
 
 from ingestion.alpha_vantage_client import AlphaVantageClient
 from ingestion.cache import load_cached_daily, save_cached_daily
 from indicators.technicals import sma  # assumes sma(df, window) -> pandas.Series
-from strategy.moving_average_crossover import MovingAverageCrossoverStrategy
 from backtesting.backtester import Backtester
 from backtesting.portfolio_backtester import PortfolioBacktester
 from config.settings import ALPHA_VANTAGE_API_KEY, setup_logging
 
 
 logger = logging.getLogger(__name__)
+
+
+STRATEGY_CONFIG_PATH = "config/strategies.yaml"
+
+
+def load_strategy_config(config_path: str = STRATEGY_CONFIG_PATH) -> Dict[str, Any]:
+    """Load strategy configuration from YAML."""
+    try:
+        with open(config_path, "r", encoding="utf-8") as f:
+            config = yaml.safe_load(f) or {}
+    except FileNotFoundError:
+        logger.error("Strategy config not found at %s", config_path)
+        raise
+    except yaml.YAMLError as exc:
+        logger.error("Failed to parse strategy config: %s", exc)
+        raise
+
+    return config
+
+
+def build_strategy(
+    strategy_name: str | None,
+    *,
+    override_params: Dict[str, Any] | None = None,
+    config_path: str = STRATEGY_CONFIG_PATH,
+):
+    """Instantiate a strategy dynamically based on YAML configuration."""
+    config = load_strategy_config(config_path)
+    default_strategy = config.get("default_strategy")
+    strategies = config.get("strategies", {})
+
+    chosen_strategy = strategy_name or default_strategy
+    if not chosen_strategy:
+        raise ValueError("No strategy specified and no default_strategy defined in config.")
+
+    if chosen_strategy not in strategies:
+        raise ValueError(
+            f"Strategy '{chosen_strategy}' not found in configuration. Available: {list(strategies)}"
+        )
+
+    strategy_def = strategies[chosen_strategy]
+    module_name = strategy_def.get("module")
+    class_name = strategy_def.get("class")
+    if not module_name or not class_name:
+        raise ValueError(f"Strategy definition for '{chosen_strategy}' is incomplete.")
+
+    params: Dict[str, Any] = dict(strategy_def.get("params", {}))
+    if override_params:
+        params.update(override_params)
+
+    try:
+        module = importlib.import_module(module_name)
+    except ImportError as exc:
+        logger.error("Unable to import strategy module %s: %s", module_name, exc)
+        raise
+
+    try:
+        strategy_class = getattr(module, class_name)
+    except AttributeError:
+        logger.error("Strategy class %s not found in module %s", class_name, module_name)
+        raise
+
+    return strategy_class(**params), chosen_strategy
 
 
 def run_backtest(
@@ -25,6 +90,7 @@ def run_backtest(
     free_tier_only: bool = True,
     use_cache: bool = True,
     force_refresh: bool = False,
+    strategy_name: str | None = None,
 ):
     """
     Core function that runs the full backtest and returns a results dict.
@@ -34,6 +100,7 @@ def run_backtest(
     cache_loaded = False
     cache_seeded = False
     df = None
+    active_strategy_name = strategy_name
 
     if use_cache and not force_refresh:
         df = load_cached_daily(symbol, outputsize=outputsize)
@@ -80,10 +147,18 @@ def run_backtest(
     df["sma_long"] = sma(df, window=long_window)
 
     # 3. Run strategy
-    strategy = MovingAverageCrossoverStrategy(
-        short_window=short_window,
-        long_window=long_window
-    )
+    override_params: Dict[str, Any] = {
+        "short_window": short_window,
+        "long_window": long_window,
+    }
+    try:
+        strategy, active_strategy_name = build_strategy(
+            strategy_name, override_params=override_params
+        )
+    except Exception as exc:
+        logger.error("Failed to load strategy: %s", exc)
+        raise
+
     df = strategy.run(df)
 
     # 4. Run backtest
@@ -103,6 +178,7 @@ def run_backtest(
             "cache_used": cache_loaded,
             "cache_seeded": cache_seeded,
             "force_refresh": force_refresh,
+            "strategy": active_strategy_name,
         }
     )
 
@@ -116,6 +192,16 @@ def main():
     """
     setup_logging()
     logger.info("=== Trading System Runner ===")
+
+    try:
+        strategy_config = load_strategy_config()
+    except Exception:
+        logger.error("Unable to load strategy configuration. Aborting.")
+        return
+
+    strategies = strategy_config.get("strategies", {})
+    default_strategy = strategy_config.get("default_strategy")
+    strategy_names = list(strategies.keys())
 
     raw_symbols = input("Enter symbol or comma-separated symbols (e.g. AAPL or AAPL,MSFT): ")
     symbols = [s.strip().upper() for s in raw_symbols.split(",") if s.strip()]
@@ -141,11 +227,31 @@ def main():
         logger.warning("Invalid output size, defaulting to 'compact'.")
         outputsize = "compact"
 
+    strategy_prompt = (
+        f"Enter strategy name {strategy_names} [{default_strategy}]: " if strategy_names else "Enter strategy name: "
+    )
+    selected_strategy = input(strategy_prompt).strip()
+    if not selected_strategy:
+        selected_strategy = default_strategy
+    if selected_strategy and selected_strategy not in strategy_names:
+        logger.warning(
+            "Strategy '%s' not found in config. Falling back to default '%s'.",
+            selected_strategy,
+            default_strategy,
+        )
+        selected_strategy = default_strategy
+
     logger.info("Running backtest...")
 
     if len(symbols) == 1:
         symbol = symbols[0]
-        results = run_backtest(symbol, short_window, long_window, outputsize)
+        results = run_backtest(
+            symbol,
+            short_window,
+            long_window,
+            outputsize,
+            strategy_name=selected_strategy,
+        )
 
         # Expected keys in results: 'cumulative_return', 'max_drawdown'
         logger.info("\n=== Backtest Summary ===")
@@ -172,7 +278,13 @@ def main():
         for symbol in symbols:
             logger.info("--- %s ---", symbol)
             try:
-                results = run_backtest(symbol, short_window, long_window, outputsize)
+                results = run_backtest(
+                    symbol,
+                    short_window,
+                    long_window,
+                    outputsize,
+                    strategy_name=selected_strategy,
+                )
             except Exception as exc:  # surface per-symbol errors without stopping all
                 logger.error("Error running backtest for %s: %s", symbol, exc)
                 continue
