@@ -3,6 +3,10 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import matplotlib
+
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt
 import pandas as pd
 
 
@@ -60,6 +64,66 @@ class Backtester:
             "max_drawdown": max_drawdown,
             "results_path": str(self.results_path),
         }
+
+    def plot_results(
+        self,
+        df: pd.DataFrame,
+        symbol: str,
+        output_path: str | Path | None = None,
+    ) -> str:
+        """Plot price, moving averages, and buy/sell signals over time.
+
+        Saves the plot under ``reports/`` by default and returns the saved path.
+        """
+
+        self._validate_inputs(df)
+
+        output = Path(output_path) if output_path is not None else Path("reports") / f"{symbol}_backtest.png"
+        output.parent.mkdir(parents=True, exist_ok=True)
+
+        fig, ax = plt.subplots(figsize=(12, 6))
+
+        df[self.price_column].plot(ax=ax, label="Close", color="black", linewidth=1.2)
+
+        if "sma_short" in df.columns:
+            df["sma_short"].plot(ax=ax, label="SMA Short", color="blue", linestyle="--")
+        if "sma_long" in df.columns:
+            df["sma_long"].plot(ax=ax, label="SMA Long", color="orange", linestyle="--")
+
+        if self.signal_column in df.columns:
+            buy_signals = df[df[self.signal_column] > 0]
+            sell_signals = df[df[self.signal_column] < 0]
+
+            if not buy_signals.empty:
+                ax.scatter(
+                    buy_signals.index,
+                    buy_signals[self.price_column],
+                    marker="^",
+                    color="green",
+                    label="Buy",
+                    zorder=5,
+                )
+            if not sell_signals.empty:
+                ax.scatter(
+                    sell_signals.index,
+                    sell_signals[self.price_column],
+                    marker="v",
+                    color="red",
+                    label="Sell",
+                    zorder=5,
+                )
+
+        ax.set_title(f"Backtest Results for {symbol}")
+        ax.set_xlabel("Date")
+        ax.set_ylabel("Price")
+        ax.legend()
+        ax.grid(True, linestyle="--", alpha=0.3)
+
+        fig.tight_layout()
+        fig.savefig(output, bbox_inches="tight")
+        plt.close(fig)
+
+        return str(output)
 
     def _validate_inputs(self, df: pd.DataFrame) -> None:
         if self.price_column not in df.columns:
