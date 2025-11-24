@@ -1,6 +1,7 @@
 FROM python:3.11-slim
 
-ENV PYTHONUNBUFFERED=1
+ENV PYTHONUNBUFFERED=1 \
+    RUN_MODE=console
 
 WORKDIR /app
 
@@ -8,5 +9,8 @@ COPY requirements.txt /app/requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . /app
+RUN chmod +x /app/docker-entrypoint.sh
 
-CMD ["python", "run_strategy.py"]
+EXPOSE 8501
+
+ENTRYPOINT ["/app/docker-entrypoint.sh"]
