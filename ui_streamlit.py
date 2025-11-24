@@ -1,11 +1,29 @@
 import streamlit as st
 
-from run_strategy import run_backtest
+from run_strategy import load_strategy_config, run_backtest
 
 
 st.title("Trading Strategy Backtest")
 
-st.markdown("Use this interface to run the moving average crossover strategy backtest.")
+st.markdown("Use this interface to run a backtest with your configured strategies.")
+
+try:
+    strategy_config = load_strategy_config()
+    strategies = strategy_config.get("strategies", {})
+    default_strategy = strategy_config.get("default_strategy")
+    strategy_names = list(strategies.keys())
+    if not strategy_names:
+        st.error("No strategies defined in configuration.")
+        st.stop()
+except Exception as exc:
+    st.error(f"Unable to load strategy configuration: {exc}")
+    st.stop()
+
+strategy_name = st.selectbox(
+    "Strategy",
+    options=strategy_names,
+    index=strategy_names.index(default_strategy) if default_strategy in strategy_names else 0,
+)
 
 # Input fields
 symbol = st.text_input("Symbol", value="AAPL")
@@ -34,6 +52,7 @@ if refresh_cache:
                 outputsize=outputsize,
                 use_cache=True,
                 force_refresh=True,
+                strategy_name=strategy_name,
             )
         except Exception as exc:
             st.error(f"Cache refresh failed: {exc}")
@@ -63,6 +82,7 @@ if st.button("Run backtest"):
                     long_window=int(long_window),
                     outputsize=requested_outputsize,
                     use_cache=use_cache,
+                    strategy_name=strategy_name,
                 )
         except Exception as exc:  # Surface Alpha Vantage errors clearly in the UI
             st.error(f"Backtest failed: {exc}")
