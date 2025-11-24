@@ -1,10 +1,13 @@
 # run_strategy.py
 
+import pandas as pd
+
 from ingestion.alpha_vantage_client import AlphaVantageClient
 from ingestion.cache import load_cached_daily, save_cached_daily
 from indicators.technicals import sma  # assumes sma(df, window) -> pandas.Series
 from strategy.moving_average_crossover import MovingAverageCrossoverStrategy
 from backtesting.backtester import Backtester
+from backtesting.portfolio_backtester import PortfolioBacktester
 from config.settings import ALPHA_VANTAGE_API_KEY
 
 
@@ -145,6 +148,7 @@ def main():
             )
     else:
         print(f"Running backtests for {len(symbols)} symbols...\n")
+        portfolio_inputs: dict[str, pd.DataFrame] = {}
         for symbol in symbols:
             print(f"--- {symbol} ---")
             try:
@@ -165,6 +169,29 @@ def main():
                 print(
                     "Detailed results may be in reports/results.csv (depending on your Backtester implementation)."
                 )
+            print()
+
+            if "results" in results:
+                portfolio_inputs[symbol] = results["results"]
+
+        if portfolio_inputs:
+            print("=== Portfolio Summary ===")
+            try:
+                portfolio_backtester = PortfolioBacktester()
+                portfolio_results = portfolio_backtester.run(portfolio_inputs)
+            except Exception as exc:
+                print(f"Error running portfolio backtest: {exc}")
+            else:
+                print(
+                    f"Portfolio cumulative return: {portfolio_results['cumulative_return']:.2%}"
+                )
+                print(
+                    f"Portfolio max drawdown: {portfolio_results['max_drawdown']:.2%}"
+                )
+                if "results_path" in portfolio_results:
+                    print(
+                        f"Portfolio results saved to: {portfolio_results['results_path']}"
+                    )
             print()
 
 
