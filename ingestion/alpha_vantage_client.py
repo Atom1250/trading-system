@@ -1,10 +1,14 @@
 """Client for downloading historical data from Alpha Vantage."""
 from __future__ import annotations
 
+import logging
 from typing import Any, Dict, Optional
 
 import pandas as pd
 import requests
+
+
+logger = logging.getLogger(__name__)
 
 
 class AlphaVantageInformation(RuntimeError):
@@ -41,7 +45,7 @@ class AlphaVantageClient:
         if "Information" in data:
             # Other informational response (often related to API key usage)
             message = data["Information"]
-            print(f"Alpha Vantage message: {message}")
+            logger.error("Alpha Vantage message: %s", message)
             raise AlphaVantageInformation(message)
 
         return data
@@ -116,6 +120,6 @@ class AlphaVantageClient:
             try:
                 results[symbol] = self.get_daily(symbol, output_size=output_size)
             except Exception as exc:  # noqa: BLE001 - surface per-symbol errors
-                print(f"Failed to fetch {symbol}: {exc}")
+                logger.error("Failed to fetch %s: %s", symbol, exc)
 
         return results
