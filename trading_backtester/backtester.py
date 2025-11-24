@@ -103,22 +103,27 @@ class Backtester:
         stats = bt.run()
         equity_curve = stats["_equity_curve"].copy()
 
-        trimmed_curve = equity_curve.iloc[-len(df):]
-        trimmed_curve.index = df.index[-len(trimmed_curve):]
+        # ``backtesting.py`` reports an initial equity row followed by one row per
+        # bar. Preserve that first row as the baseline so the first period's P&L
+        # is included in cumulative returns.
+        equity_full = equity_curve.iloc[-(len(df) + 1) :]
+        equity_full.index = equity_curve.index[-len(equity_full) :]
+
+        equity_series = equity_full["Equity"].iloc[1:]
+        strategy_returns = equity_full["Equity"].pct_change().fillna(0).iloc[1:]
+        cumulative_returns = equity_series.div(equity_full["Equity"].iloc[0]).sub(1)
 
         results = df.copy()
-        results["equity"] = trimmed_curve["Equity"].values
-        results["strategy_returns"] = trimmed_curve["Equity"].pct_change().fillna(0).values
-        results["cumulative_returns"] = (
-            trimmed_curve["Equity"].div(trimmed_curve["Equity"].iloc[0]).sub(1).values
-        )
-        if "DrawdownPct" in trimmed_curve.columns:
-            results["drawdown"] = trimmed_curve["DrawdownPct"].div(100).values
+        results["equity"] = equity_series.values
+        results["strategy_returns"] = strategy_returns.values
+        results["cumulative_returns"] = cumulative_returns.values
+
+        if "DrawdownPct" in equity_full.columns:
+            drawdown = equity_full["DrawdownPct"].div(100).iloc[1:]
         else:
-            running_max = trimmed_curve["Equity"].cummax()
-            results["drawdown"] = (
-                trimmed_curve["Equity"] - running_max
-            ) / running_max.replace(0, pd.NA)
+            running_max = equity_series.cummax()
+            drawdown = (equity_series - running_max) / running_max.replace(0, pd.NA)
+        results["drawdown"] = drawdown.values
 
         self._export_results(results)
 
