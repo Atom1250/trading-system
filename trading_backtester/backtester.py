@@ -3,9 +3,9 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import importlib.util
-import sys
 import logging
+import sys
+import importlib.util
 import matplotlib
 
 matplotlib.use("Agg")
@@ -17,25 +17,29 @@ logger = logging.getLogger(__name__)
 project_root = Path(__file__).resolve().parent.parent
 shadow_dir = project_root / "backtesting"
 
-# If a local ``backtesting/`` directory exists, reorder ``sys.path`` so the
-# external dependency (site-packages) is preferred ahead of the project root.
+# Prefer the installed ``backtesting.py`` package by searching site-packages
+# explicitly. If a local ``backtesting/`` directory exists, warn but do not
+# block imports—restrict the search path to site-packages to avoid shadowing.
+site_paths = [p for p in sys.path if "site-packages" in p]
+search_paths = site_paths or None
+
 if shadow_dir.exists():
-    root_str = str(project_root)
-    if root_str in sys.path:
-        sys.path.remove(root_str)
-        sys.path.append(root_str)
     logger.warning(
-        "Found local 'backtesting' directory at %s; prioritizing external package from site-packages.",
+        "Detected local 'backtesting' directory at %s; will attempt to load the external package from site-packages to avoid shadowing.",
         shadow_dir,
     )
 
-_backtesting_spec = importlib.util.find_spec("backtesting")
-if _backtesting_spec is None or _backtesting_spec.origin is None:
+_backtesting_spec = importlib.util.find_spec("backtesting", search_paths)
+if _backtesting_spec is None or _backtesting_spec.loader is None:
     raise ImportError(
         "The external 'backtesting' package is required. Install it with 'pip install backtesting'."
     )
 
-from backtesting import Backtest, Strategy
+_backtesting_module = importlib.util.module_from_spec(_backtesting_spec)
+assert _backtesting_spec.loader is not None  # for mypy
+_backtesting_spec.loader.exec_module(_backtesting_module)
+Backtest = getattr(_backtesting_module, "Backtest")
+Strategy = getattr(_backtesting_module, "Strategy")
 
 
 class Backtester:
