@@ -1,7 +1,9 @@
 # run_strategy.py
 
+import argparse
 import importlib
 import logging
+import sys
 from typing import Any, Dict
 
 import pandas as pd
@@ -34,6 +36,51 @@ def load_strategy_config(config_path: str = STRATEGY_CONFIG_PATH) -> Dict[str, A
         raise
 
     return config
+
+
+def _default_windows(config: Dict[str, Any], strategy_name: str | None) -> tuple[int | None, int | None]:
+    """Return default short/long windows from the strategy config if present."""
+
+    strategies = config.get("strategies", {})
+    strategy_def = strategies.get(strategy_name or "")
+    if not strategy_def:
+        strategy_def = strategies.get(config.get("default_strategy", ""))
+
+    params = (strategy_def or {}).get("params", {})
+    return params.get("short_window"), params.get("long_window")
+
+
+def parse_args(strategy_config: Dict[str, Any]) -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Run trading strategy backtests")
+    parser.add_argument("--symbol", help="Symbol or comma-separated symbols to backtest")
+    parser.add_argument("--short-window", type=int, dest="short_window", help="Short moving average window")
+    parser.add_argument("--long-window", type=int, dest="long_window", help="Long moving average window")
+    parser.add_argument(
+        "--outputsize",
+        choices=["compact", "full"],
+        help="Alpha Vantage output size (compact for free tier)",
+    )
+    parser.add_argument("--strategy", help="Strategy name defined in config/strategies.yaml")
+    parser.add_argument(
+        "--force-refresh",
+        action="store_true",
+        help="Force re-download data even if cached",
+    )
+    parser.add_argument(
+        "--no-cache",
+        action="store_true",
+        help="Skip reading/writing cached prices (fetch fresh data)",
+    )
+    parser.add_argument(
+        "--allow-interactive",
+        action="store_true",
+        help="Allow interactive prompts even when stdin is not a TTY",
+    )
+
+    defaults = _default_windows(strategy_config, strategy_config.get("default_strategy"))
+    parser.set_defaults(default_short_window=defaults[0], default_long_window=defaults[1])
+
+    return parser.parse_args()
 
 
 def build_strategy(
@@ -83,14 +130,15 @@ def build_strategy(
 
 def run_backtest(
     symbol: str,
-    short_window: int,
-    long_window: int,
+    short_window: int | None = None,
+    long_window: int | None = None,
     outputsize: str = "compact",
     *,
     free_tier_only: bool = True,
     use_cache: bool = True,
     force_refresh: bool = False,
     strategy_name: str | None = None,
+    strategy_params: Dict[str, Any] | None = None,
 ):
     """
     Core function that runs the full backtest and returns a results dict.
@@ -155,15 +203,18 @@ def run_backtest(
 
     data_source = "cache" if cache_loaded else "api"
 
-    # 2. Compute indicators needed by the strategy
-    df["sma_short"] = sma(df, window=short_window)
-    df["sma_long"] = sma(df, window=long_window)
+    # 2. Compute indicators needed by the strategy and for chart overlays
+    if short_window:
+        df["sma_short"] = sma(df, window=short_window)
+    if long_window:
+        df["sma_long"] = sma(df, window=long_window)
 
     # 3. Run strategy
-    override_params: Dict[str, Any] = {
-        "short_window": short_window,
-        "long_window": long_window,
-    }
+    override_params: Dict[str, Any] = dict(strategy_params or {})
+    if short_window is not None and (not override_params or "short_window" in override_params):
+        override_params["short_window"] = short_window
+    if long_window is not None and (not override_params or "long_window" in override_params):
+        override_params["long_window"] = long_window
     try:
         strategy, active_strategy_name = build_strategy(
             strategy_name, override_params=override_params
@@ -216,34 +267,68 @@ def main():
     default_strategy = strategy_config.get("default_strategy")
     strategy_names = list(strategies.keys())
 
-    raw_symbols = input("Enter symbol or comma-separated symbols (e.g. AAPL or AAPL,MSFT): ")
+    args = parse_args(strategy_config)
+    interactive_allowed = sys.stdin.isatty() or args.allow_interactive
+
+    raw_symbols = args.symbol
+    if not raw_symbols and interactive_allowed:
+        raw_symbols = input(
+            "Enter symbol or comma-separated symbols (e.g. AAPL or AAPL,MSFT): "
+        )
+    if not raw_symbols:
+        fallback_symbol = "AAPL"
+        logger.info("No symbols provided; defaulting to %s for non-interactive run.", fallback_symbol)
+        raw_symbols = fallback_symbol
+
     symbols = [s.strip().upper() for s in raw_symbols.split(",") if s.strip()]
     if not symbols:
         logger.error("At least one symbol is required.")
         return
 
+    default_short, default_long = args.default_short_window, args.default_long_window
+
+    def _resolve_window(prompt: str, provided: int | None, default_val: int | None) -> int:
+        if provided is not None:
+            return provided
+        if interactive_allowed:
+            return int(input(prompt).strip())
+        if default_val is None:
+            raise ValueError("No default window configured; please provide inputs explicitly.")
+        logger.info("Using configured default for non-interactive run: %s", default_val)
+        return default_val
+
     try:
-        short_window = int(input("Enter SHORT moving average window (e.g. 20): ").strip())
-        long_window = int(input("Enter LONG moving average window (e.g. 50): ").strip())
-    except ValueError:
-        logger.error("Short and long windows must be integers.")
+        short_window = _resolve_window(
+            "Enter SHORT moving average window (e.g. 20): ", args.short_window, default_short
+        )
+        long_window = _resolve_window(
+            "Enter LONG moving average window (e.g. 50): ", args.long_window, default_long
+        )
+    except ValueError as exc:
+        logger.error("Short and long windows must be integers: %s", exc)
         return
 
     if short_window >= long_window:
         logger.error("Short window must be smaller than long window.")
         return
 
-    outputsize = input("Output size 'compact' or 'full' [compact]: ").strip().lower()
+    outputsize = args.outputsize.lower() if args.outputsize else ""
+    if not outputsize and interactive_allowed:
+        outputsize = input("Output size 'compact' or 'full' [compact]: ").strip().lower()
     if outputsize == "":
         outputsize = "compact"
     if outputsize not in ("compact", "full"):
         logger.warning("Invalid output size, defaulting to 'compact'.")
         outputsize = "compact"
 
-    strategy_prompt = (
-        f"Enter strategy name {strategy_names} [{default_strategy}]: " if strategy_names else "Enter strategy name: "
-    )
-    selected_strategy = input(strategy_prompt).strip()
+    selected_strategy = args.strategy or ""
+    if not selected_strategy and interactive_allowed:
+        strategy_prompt = (
+            f"Enter strategy name {strategy_names} [{default_strategy}]: "
+            if strategy_names
+            else "Enter strategy name: "
+        )
+        selected_strategy = input(strategy_prompt).strip()
     if not selected_strategy:
         selected_strategy = default_strategy
     if selected_strategy and selected_strategy not in strategy_names:
@@ -253,6 +338,9 @@ def main():
             default_strategy,
         )
         selected_strategy = default_strategy
+
+    force_refresh = args.force_refresh
+    use_cache = not args.no_cache
 
     logger.info("Running backtest...")
 
@@ -264,6 +352,8 @@ def main():
             long_window,
             outputsize,
             strategy_name=selected_strategy,
+            force_refresh=force_refresh,
+            use_cache=use_cache,
         )
 
         # Expected keys in results: 'cumulative_return', 'max_drawdown'
@@ -297,6 +387,8 @@ def main():
                     long_window,
                     outputsize,
                     strategy_name=selected_strategy,
+                    force_refresh=force_refresh,
+                    use_cache=use_cache,
                 )
             except Exception as exc:  # surface per-symbol errors without stopping all
                 logger.error("Error running backtest for %s: %s", symbol, exc)
