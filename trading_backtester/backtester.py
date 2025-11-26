@@ -5,6 +5,7 @@ from pathlib import Path
 
 import logging
 import sys
+import importlib.machinery
 import importlib.util
 import matplotlib
 
@@ -29,15 +30,44 @@ if shadow_dir.exists():
         shadow_dir,
     )
 
-_backtesting_spec = importlib.util.find_spec("backtesting", search_paths)
-if _backtesting_spec is None or _backtesting_spec.loader is None:
+# Ensure any earlier import of the local ``backtesting`` package does not leak
+# into the dependency import below.
+sys.modules.pop("backtesting", None)
+
+if not search_paths:
+    raise ImportError(
+        "Unable to locate site-packages on sys.path; cannot import external 'backtesting' dependency."
+    )
+
+module_root = Path(search_paths[0]) / "backtesting"
+init_path = module_root / "__init__.py"
+
+if not init_path.exists():
     raise ImportError(
         "The external 'backtesting' package is required. Install it with 'pip install backtesting'."
     )
 
-_backtesting_module = importlib.util.module_from_spec(_backtesting_spec)
-assert _backtesting_spec.loader is not None  # for mypy
-_backtesting_spec.loader.exec_module(_backtesting_module)
+# Temporarily restrict sys.path to stdlib + site-packages so the external
+# dependency is imported instead of the local ``backtesting/`` helper directory.
+original_sys_path = sys.path.copy()
+stdlib_paths = [p for p in original_sys_path if "lib/python" in p and "site-packages" not in p]
+try:
+    sys.path = stdlib_paths + search_paths
+    _backtesting_spec = importlib.util.spec_from_file_location(
+        "backtesting",
+        init_path,
+        submodule_search_locations=[str(module_root)],
+    )
+    if _backtesting_spec is None or _backtesting_spec.loader is None:
+        raise ImportError(
+            "The external 'backtesting' package is required. Install it with 'pip install backtesting'."
+        )
+
+    _backtesting_module = importlib.util.module_from_spec(_backtesting_spec)
+    assert _backtesting_spec.loader is not None  # for mypy
+    _backtesting_spec.loader.exec_module(_backtesting_module)
+finally:
+    sys.path = original_sys_path
 Backtest = getattr(_backtesting_module, "Backtest")
 Strategy = getattr(_backtesting_module, "Strategy")
 
@@ -107,23 +137,25 @@ class Backtester:
         stats = bt.run()
         equity_curve = stats["_equity_curve"].copy()
 
-        # ``backtesting.py`` reports an initial equity row followed by one row per
-        # bar. Preserve that first row as the baseline so the first period's P&L
-        # is included in cumulative returns.
-        equity_full = equity_curve.iloc[-(len(df) + 1) :]
-        equity_full.index = equity_curve.index[-len(equity_full) :]
+        # Align equity metrics to the input DataFrame length to avoid pandas
+        # length-mismatch errors when assigning columns. ``backtesting.py``
+        # sometimes returns ``len(df)`` rows (one per bar) and sometimes
+        # ``len(df) + 1`` (including a baseline row). Always take the most recent
+        # ``len(df)`` values and align them to ``df.index``.
+        equity_values = equity_curve["Equity"].values
+        equity_series = pd.Series(equity_values[-len(df) :], index=df.index)
 
-        equity_series = equity_full["Equity"].iloc[1:]
-        strategy_returns = equity_full["Equity"].pct_change().fillna(0).iloc[1:]
-        cumulative_returns = equity_series.div(equity_full["Equity"].iloc[0]).sub(1)
+        strategy_returns = equity_series.pct_change().fillna(0)
+        cumulative_returns = equity_series.div(equity_series.iloc[0]).sub(1)
 
         results = df.copy()
         results["equity"] = equity_series.values
         results["strategy_returns"] = strategy_returns.values
         results["cumulative_returns"] = cumulative_returns.values
 
-        if "DrawdownPct" in equity_full.columns:
-            drawdown = equity_full["DrawdownPct"].div(100).iloc[1:]
+        if "DrawdownPct" in equity_curve.columns:
+            drawdown_values = equity_curve["DrawdownPct"].values[-len(df) :]
+            drawdown = pd.Series(drawdown_values, index=df.index).div(100)
         else:
             running_max = equity_series.cummax()
             drawdown = (equity_series - running_max) / running_max.replace(0, pd.NA)

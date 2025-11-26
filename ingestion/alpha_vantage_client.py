@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import logging
+import time
 from typing import Any, Dict, Optional
 
 import pandas as pd
@@ -50,6 +51,37 @@ class AlphaVantageClient:
 
         return data
 
+    def _get_with_retry(
+        self,
+        params: Dict[str, str],
+        *,
+        max_retries: int = 3,
+        backoff_seconds: float = 60.0,
+    ) -> Dict[str, Any]:
+        """Call Alpha Vantage with basic backoff for rate-limit responses."""
+
+        last_exc: Exception | None = None
+
+        for attempt in range(1, max_retries + 1):
+            try:
+                return self._get(params)
+            except (RuntimeError, AlphaVantageInformation) as exc:
+                last_exc = exc
+                if attempt == max_retries:
+                    break
+
+                logger.warning(
+                    "Alpha Vantage responded with %s. Sleeping %.1fs before retry %s/%s.",
+                    exc,
+                    backoff_seconds,
+                    attempt,
+                    max_retries,
+                )
+                time.sleep(backoff_seconds)
+
+        assert last_exc  # for type checkers; code above always sets it before breaking
+        raise last_exc
+
     def get_daily(
         self,
         symbol: str,
@@ -81,7 +113,7 @@ class AlphaVantageClient:
             "outputsize": effective_outputsize,
         }
 
-        data = self._get(params)
+        data = self._get_with_retry(params)
         time_series_key = "Time Series (Daily)"
 
         if time_series_key not in data:
@@ -106,20 +138,54 @@ class AlphaVantageClient:
         return df
 
     def get_daily_multiple(
-        self, symbols: list[str], output_size: str = "compact"
+        self,
+        symbols: list[str],
+        output_size: str = "compact",
+        *,
+        pause_seconds: float = 12.0,
     ) -> dict[str, pd.DataFrame]:
         """Fetch daily data for multiple symbols.
 
-        Loops over each symbol, reusing :meth:`get_daily` and aggregating results.
-        Errors for an individual symbol are logged and skipped so other requests
-        can proceed.
+        Loops over each symbol, reusing :meth:`get_daily` and aggregating results
+        while respecting Alpha Vantage free-tier limits. The client pauses
+        between each request and enforces no more than five calls per minute.
+
+        Args:
+            symbols: Iterable of ticker symbols to fetch sequentially.
+            output_size: Alpha Vantage output size parameter ("compact" or "full").
+            pause_seconds: Number of seconds to sleep after each request to avoid
+                tripping the free-tier rate limit. Default of 12 seconds yields
+                at most five calls per minute.
         """
 
         results: dict[str, pd.DataFrame] = {}
-        for symbol in symbols:
+        window_start = time.monotonic()
+        calls_in_window = 0
+
+        for index, symbol in enumerate(symbols):
+            now = time.monotonic()
+            elapsed = now - window_start
+            if elapsed >= 60:
+                window_start = now
+                calls_in_window = 0
+
+            if calls_in_window >= 5:
+                sleep_duration = max(0.0, 60 - elapsed)
+                if sleep_duration:
+                    logger.info(
+                        "Sleeping %.1fs to respect Alpha Vantage rate limits", sleep_duration
+                    )
+                    time.sleep(sleep_duration)
+                window_start = time.monotonic()
+                calls_in_window = 0
+
             try:
                 results[symbol] = self.get_daily(symbol, output_size=output_size)
+                calls_in_window += 1
             except Exception as exc:  # noqa: BLE001 - surface per-symbol errors
                 logger.error("Failed to fetch %s: %s", symbol, exc)
+
+            if index < len(symbols) - 1:
+                time.sleep(pause_seconds)
 
         return results

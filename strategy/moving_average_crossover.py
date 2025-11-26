@@ -4,6 +4,7 @@ from __future__ import annotations
 import pandas as pd
 
 from indicators.technicals import sma
+from strategy.trade_management import apply_position_management
 
 
 class MovingAverageCrossoverStrategy:
@@ -14,7 +15,18 @@ class MovingAverageCrossoverStrategy:
         long_window: Window length for the slow SMA.
     """
 
-    def __init__(self, short_window: int = 50, long_window: int = 200) -> None:
+    def __init__(
+        self,
+        short_window: int = 50,
+        long_window: int = 200,
+        *,
+        initial_capital: float = 100_000.0,
+        risk_per_trade: float = 0.01,
+        atr_window: int = 14,
+        stop_atr_multiple: float = 1.5,
+        take_profit_multiple: float = 2.0,
+        max_drawdown_pct: float = 0.2,
+    ) -> None:
         if short_window <= 0 or long_window <= 0:
             raise ValueError("Window lengths must be positive integers.")
         if short_window >= long_window:
@@ -22,6 +34,12 @@ class MovingAverageCrossoverStrategy:
 
         self.short_window = short_window
         self.long_window = long_window
+        self.initial_capital = initial_capital
+        self.risk_per_trade = risk_per_trade
+        self.atr_window = atr_window
+        self.stop_atr_multiple = stop_atr_multiple
+        self.take_profit_multiple = take_profit_multiple
+        self.max_drawdown_pct = max_drawdown_pct
 
     def run(self, df: pd.DataFrame, price_column: str = "close") -> pd.DataFrame:
         """Run the strategy and return the DataFrame with signals.
@@ -57,4 +75,15 @@ class MovingAverageCrossoverStrategy:
                 df[price_column].lt(df["bb_lower"]).fillna(False)
             )
 
-        return df
+        managed = apply_position_management(
+            df,
+            price_column=price_column,
+            initial_capital=self.initial_capital,
+            risk_per_trade=self.risk_per_trade,
+            atr_window=self.atr_window,
+            stop_atr_multiple=self.stop_atr_multiple,
+            take_profit_multiple=self.take_profit_multiple,
+            max_drawdown_pct=self.max_drawdown_pct,
+        )
+
+        return managed

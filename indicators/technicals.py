@@ -4,7 +4,14 @@ from __future__ import annotations
 import pandas as pd
 
 
-__all__ = ["sma", "ema", "rsi", "macd", "bollinger_bands"]
+__all__ = [
+    "sma",
+    "ema",
+    "rsi",
+    "macd",
+    "bollinger_bands",
+    "average_true_range",
+]
 
 
 def sma(df: pd.DataFrame, window: int = 14, column: str = "close") -> pd.Series:
@@ -127,3 +134,53 @@ def bollinger_bands(
     ].astype(float)
 
     return df
+
+
+def average_true_range(
+    df: pd.DataFrame,
+    window: int = 14,
+    *,
+    high_column: str = "high",
+    low_column: str = "low",
+    close_column: str = "close",
+) -> pd.Series:
+    """Calculate the Average True Range (ATR) for volatility-aware sizing.
+
+    Args:
+        df: DataFrame containing high, low, and close columns.
+        window: Lookback window for the ATR smoothing period.
+        high_column: Column name for session highs.
+        low_column: Column name for session lows.
+        close_column: Column name for session closes.
+
+    Returns:
+        The ATR series, also attached to the provided DataFrame with an
+        ``ATR_<window>`` column name.
+    """
+    missing = [
+        name
+        for name in (high_column, low_column, close_column)
+        if name not in df.columns
+    ]
+    if missing:
+        raise KeyError(
+            "Missing required columns for ATR calculation: " + ", ".join(missing)
+        )
+
+    high = df[high_column]
+    low = df[low_column]
+    close = df[close_column]
+    previous_close = close.shift(1)
+
+    true_range = pd.concat(
+        [
+            high - low,
+            (high - previous_close).abs(),
+            (low - previous_close).abs(),
+        ],
+        axis=1,
+    ).max(axis=1)
+
+    col_name = f"ATR_{window}"
+    df[col_name] = true_range.rolling(window=window, min_periods=window).mean()
+    return df[col_name]
