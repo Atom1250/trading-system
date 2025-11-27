@@ -1,12 +1,12 @@
 # AGENTS.md
 
-Project: Internal Trading System (Alpha Vantage prototype)
+Project: Internal Trading System (FMP-powered prototype)
 
 Context:
 - Python 3.10+
 - Repo layout with src/, tests/, data/, reports/
 - Backtesting.py for backtests
-- Alpha Vantage as the only external market data source (free tier initially)
+- FinancialModelingPrep (FMP) as the external market data source
 - No live trading yet, only research/backtesting
 
 ## Core Technologies & Frameworks (do not change unless explicitly requested)
@@ -16,7 +16,7 @@ You MUST keep the following choices stable across the codebase, unless the user 
 - Backtesting framework: **backtesting.py**
 - Indicator library: **ta**
 - Performance/tearsheet library: **quantstats**
-- Data source: **Alpha Vantage** for historical market data
+- Data source: **FinancialModelingPrep (FMP)** for historical market data
 - Configuration: environment variables via **python-dotenv** and `.env`
 - Optional UI: **Streamlit** (if present) for interactive dashboards
 

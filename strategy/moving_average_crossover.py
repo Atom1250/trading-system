@@ -1,10 +1,14 @@
 """Moving Average Crossover trading strategy implementation."""
 from __future__ import annotations
 
+import logging
 import pandas as pd
 
 from indicators.technicals import sma
 from strategy.trade_management import apply_position_management
+
+
+logger = logging.getLogger(__name__)
 
 
 class MovingAverageCrossoverStrategy:
@@ -26,6 +30,7 @@ class MovingAverageCrossoverStrategy:
         stop_atr_multiple: float = 1.5,
         take_profit_multiple: float = 2.0,
         max_drawdown_pct: float = 0.2,
+        fundamentals: dict | None = None,
     ) -> None:
         if short_window <= 0 or long_window <= 0:
             raise ValueError("Window lengths must be positive integers.")
@@ -40,6 +45,10 @@ class MovingAverageCrossoverStrategy:
         self.stop_atr_multiple = stop_atr_multiple
         self.take_profit_multiple = take_profit_multiple
         self.max_drawdown_pct = max_drawdown_pct
+        self.fundamentals = fundamentals or {}
+
+        if self.fundamentals:
+            logger.debug("Loaded fundamentals for strategy: keys=%s", list(self.fundamentals.keys()))
 
     def run(self, df: pd.DataFrame, price_column: str = "close") -> pd.DataFrame:
         """Run the strategy and return the DataFrame with signals.

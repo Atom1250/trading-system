@@ -9,15 +9,8 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# Required API key for Alpha Vantage requests. Read from environment or .env.
-ALPHA_VANTAGE_API_KEY = os.getenv("ALPHA_VANTAGE_API_KEY")
-
-# Allow overriding the base URL via environment for testing, defaulting to production.
-BASE_URL = os.getenv("ALPHA_VANTAGE_BASE_URL", "https://www.alphavantage.co/query")
-
 
 class PriceDataSource(str, Enum):
-    ALPHA_VANTAGE = "alpha_vantage"
     LOCAL_REPOSITORY = "local_repository"
     YAHOO_FINANCE = "yahoo_finance"
     FMP = "fmp"
@@ -31,12 +24,12 @@ UNIVERSE_DIR = DATA_ROOT / "universe"
 
 # Default data source; can be overridden by env var TS_PRICE_DATA_SOURCE
 DEFAULT_PRICE_DATA_SOURCE = PriceDataSource(
-    os.environ.get("TS_PRICE_DATA_SOURCE", PriceDataSource.ALPHA_VANTAGE.value)
+    os.environ.get("TS_PRICE_DATA_SOURCE", PriceDataSource.FMP.value)
 )
 
-# Optional API key for FinancialModelingPrep (for fundamentals and/or prices)
+# API key and base URL for FinancialModelingPrep (for fundamentals and prices)
 FMP_API_KEY = os.environ.get("FMP_API_KEY", "")
-FMP_BASE_URL = "https://financialmodelingprep.com/api/v3"
+FMP_BASE_URL = os.environ.get("FMP_BASE_URL", "https://financialmodelingprep.com/api/v3")
 
 
 def ensure_data_directories() -> None:

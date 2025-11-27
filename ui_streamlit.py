@@ -4,9 +4,14 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import streamlit as st
 
-from config.settings import ensure_data_directories
+from config.settings import (
+    DEFAULT_PRICE_DATA_SOURCE,
+    PriceDataSource,
+    ensure_data_directories,
+)
 from indicators.technicals import bollinger_bands
 from research.experiments.optuna_ma_optimization import optimize_ma_strategy_for_symbol
+from repository.prices_repository import get_prices_for_backtest
 from run_strategy import load_strategy_config, run_backtest
 
 
@@ -117,6 +122,25 @@ st.title("Trading Strategy Backtest")
 
 st.markdown("Use this interface to run a backtest with your configured strategies.")
 
+data_source_label = st.sidebar.selectbox(
+    "Price Data Source",
+    [
+        "Local Historical Repository",
+        "FMP API (live)",
+        "Yahoo Finance (live)",
+    ],
+)
+
+if data_source_label == "Local Historical Repository":
+    use_local_repository = True
+    data_source = PriceDataSource.LOCAL_REPOSITORY
+elif data_source_label == "FMP API (live)":
+    use_local_repository = False
+    data_source = PriceDataSource.FMP
+else:
+    use_local_repository = False
+    data_source = PriceDataSource.YAHOO_FINANCE
+
 mode = st.radio(
     "Mode",
     options=["Single Backtest", "Optimize MA Strategy"],
@@ -174,37 +198,6 @@ if mode == "Single Backtest":
     base_strategy_params = render_strategy_params(strategy_def)
     risk_settings = render_risk_controls(risk_defaults)
     user_strategy_params = {**base_strategy_params, **risk_settings}
-    outputsize = st.selectbox("Output size", options=["compact", "full"], index=0)
-    data_source = st.radio(
-        "Data source",
-        ["Cached (use local data if available)", "Live API (fetch from Alpha Vantage)"],
-        index=0,
-    )
-    use_cache = data_source.startswith("Cached")
-
-    refresh_cache = st.button("Refresh cache from API")
-
-    if refresh_cache:
-        if not symbol.strip():
-            st.error("Symbol is required to refresh the cache.")
-        else:
-            st.info(f"Refreshing cache for {symbol.strip().upper()} from Alpha Vantage...")
-            try:
-                run_backtest(
-                    symbol=symbol.strip().upper(),
-                    short_window=int(short_window),
-                    long_window=int(long_window),
-                    outputsize=outputsize,
-                    use_cache=True,
-                    force_refresh=True,
-                    strategy_name=strategy_name,
-                    strategy_params=user_strategy_params,
-                )
-            except Exception as exc:
-                st.error(f"Cache refresh failed: {exc}")
-            else:
-                st.success(f"Cache refreshed for {symbol.strip().upper()}.")
-            st.stop()
 
     # Run button
     if st.button("Run backtest"):
@@ -213,35 +206,31 @@ if mode == "Single Backtest":
         elif not symbol.strip():
             st.error("Symbol is required.")
         else:
-            requested_outputsize = outputsize
-            if requested_outputsize == "full":
-                st.info(
-                    "Free tier mode is enabled. Requests for 'full' output will fall back to "
-                    "'compact' to avoid premium endpoints."
-                )
-
             try:
                 with st.spinner("Running backtest..."):
+                    df = get_prices_for_backtest(
+                        symbol=symbol.strip().upper(),
+                        use_local_repository=use_local_repository,
+                        data_source=data_source,
+                    )
+                    if df is None or df.empty:
+                        st.error("No price data found for the selected source.")
+                        st.stop()
+
                     results = run_backtest(
                         symbol=symbol.strip().upper(),
                         short_window=int(short_window),
                         long_window=int(long_window),
-                        outputsize=requested_outputsize,
-                        use_cache=use_cache,
+                        data_source=data_source,
+                        use_local_repository=use_local_repository,
                         strategy_name=strategy_name,
                         strategy_params=user_strategy_params,
                     )
-            except Exception as exc:  # Surface Alpha Vantage errors clearly in the UI
+            except Exception as exc:
                 st.error(f"Backtest failed: {exc}")
                 st.stop()
 
             st.success("Backtest complete!")
-
-            if use_cache and results.get("cache_seeded"):
-                st.info(
-                    f"No cache found for {symbol.strip().upper()}. "
-                    "Fetched data from Alpha Vantage and seeded the cache."
-                )
 
             st.subheader("Summary")
             st.write(f"**Symbol:** {symbol.strip().upper()}")
@@ -261,8 +250,8 @@ if mode == "Single Backtest":
 
             if "results_path" in results:
                 st.write(f"Detailed results saved to: `{results['results_path']}`")
-            if results.get("data_source") == "api" and not use_cache:
-                st.warning("Data fetched directly from Alpha Vantage (cache bypassed).")
+            if results.get("data_source") == "fmp" and not use_cache:
+                st.warning("Data fetched directly from FMP (cache bypassed).")
 
             results_df = None
             results_path = results.get("results_path")
