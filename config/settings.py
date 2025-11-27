@@ -8,7 +8,8 @@ from typing import Optional
 from dotenv import find_dotenv, load_dotenv
 
 # Load environment variables from the nearest .env file (repo root or current dir)
-load_dotenv(find_dotenv())
+DOTENV_PATH = find_dotenv(usecwd=True)
+load_dotenv(DOTENV_PATH, override=True)
 
 
 class PriceDataSource(str, Enum):
@@ -31,6 +32,11 @@ DEFAULT_PRICE_DATA_SOURCE = PriceDataSource(
 # API key and base URL for FinancialModelingPrep (for fundamentals and prices)
 FMP_API_KEY = os.environ.get("FMP_API_KEY", "")
 FMP_BASE_URL = os.environ.get("FMP_BASE_URL", "https://financialmodelingprep.com/api/v3")
+
+if not FMP_API_KEY:
+    logging.getLogger(__name__).warning(
+        "FMP_API_KEY is not set. Loaded .env from %s", DOTENV_PATH or "environment"
+    )
 
 
 def ensure_data_directories() -> None:
