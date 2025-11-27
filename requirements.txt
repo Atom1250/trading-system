@@ -6,3 +6,6 @@ streamlit
 python-dotenv
 backtesting
 PyYAML
+stratestic
+optuna
+scikit-learn
