@@ -5,9 +5,10 @@ from enum import Enum
 from pathlib import Path
 from typing import Optional
 
-from dotenv import load_dotenv
+from dotenv import find_dotenv, load_dotenv
 
-load_dotenv()
+# Load environment variables from the nearest .env file (repo root or current dir)
+load_dotenv(find_dotenv())
 
 
 class PriceDataSource(str, Enum):
