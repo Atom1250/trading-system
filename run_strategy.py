@@ -15,6 +15,7 @@ from indicators.technicals import sma  # assumes sma(df, window) -> pandas.Serie
 from trading_backtester.backtester import Backtester
 from trading_backtester.portfolio_backtester import PortfolioBacktester
 from config.settings import ALPHA_VANTAGE_API_KEY, setup_logging
+from research.experiments.optuna_ma_optimization import optimize_ma_strategy_for_symbol
 
 
 logger = logging.getLogger(__name__)
@@ -249,6 +250,57 @@ def run_backtest(
     return results
 
 
+def _choose_mode(interactive: bool) -> str:
+    """Prompt the user for console mode selection."""
+
+    if interactive:
+        choice = input(
+            "Choose mode: [1] Single backtest, [2] Optimize MA strategy via Optuna: "
+        ).strip()
+        return choice or "1"
+
+    logger.info("Non-interactive mode detected; defaulting to single backtest (mode 1).")
+    return "1"
+
+
+def _run_optuna_mode() -> None:
+    """Run Optuna-based optimization for a user-provided symbol."""
+
+    symbol = input("Enter symbol to optimize (e.g. AAPL): ").strip().upper()
+    if not symbol:
+        logger.error("Symbol is required for optimization.")
+        return
+
+    trials_raw = input("Number of Optuna trials [50]: ").strip()
+    if trials_raw:
+        try:
+            num_trials = int(trials_raw)
+        except ValueError:
+            logger.error("Number of trials must be an integer.")
+            return
+    else:
+        num_trials = 50
+
+    logger.info(
+        "Starting Optuna optimization for %s with %s trials...", symbol, num_trials
+    )
+
+    try:
+        best_params, best_value = optimize_ma_strategy_for_symbol(
+            symbol, n_trials=num_trials
+        )
+    except Exception as exc:  # noqa: BLE001 - surface optimization errors to the console
+        logger.error("Optuna optimization failed: %s", exc)
+        return
+
+    logger.info("=== Optuna Optimization Result ===")
+    logger.info("Symbol: %s", symbol)
+    logger.info("Best objective value: %s", best_value)
+    logger.info("Best parameters:")
+    for param, value in best_params.items():
+        logger.info("  %s: %s", param, value)
+
+
 def main():
     """
     Simple console-based UI that asks the user for inputs.
@@ -256,6 +308,12 @@ def main():
     """
     setup_logging()
     logger.info("=== Trading System Runner ===")
+
+    mode_choice = _choose_mode(sys.stdin.isatty())
+
+    if mode_choice == "2":
+        _run_optuna_mode()
+        return
 
     try:
         strategy_config = load_strategy_config()
