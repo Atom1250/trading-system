@@ -318,21 +318,10 @@ if mode == "Single Backtest":
                     ]
                     if (col == "date" and "date" in table_df.columns) or (col != "date" and col in results_df.columns)
                 ]
-<<<<<<< ours
-
                 if risk_table_cols:
                     st.subheader("Position management and risk overlays")
                     risk_view = table_df[risk_table_cols].tail(100)
                     st.dataframe(risk_view)
-
-=======
-
-                if risk_table_cols:
-                    st.subheader("Position management and risk overlays")
-                    risk_view = table_df[risk_table_cols].tail(100)
-                    st.dataframe(risk_view)
-
->>>>>>> theirs
                 if "close" not in results_df.columns:
                     st.warning("Price data unavailable for chart rendering.")
                     st.stop()
