@@ -20,6 +20,7 @@ class PriceDataSource(str, Enum):
     ALPHA_VANTAGE = "alpha_vantage"
     LOCAL_REPOSITORY = "local_repository"
     YAHOO_FINANCE = "yahoo_finance"
+    FMP = "fmp"
 
 
 # Root data directory

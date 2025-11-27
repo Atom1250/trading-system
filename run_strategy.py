@@ -9,17 +9,21 @@ from typing import Any, Dict
 import pandas as pd
 import yaml
 
-from ingestion.alpha_vantage_client import AlphaVantageClient
-from ingestion.cache import load_cached_daily, save_cached_daily
+from config.settings import (
+    DEFAULT_PRICE_DATA_SOURCE,
+    PriceDataSource,
+    ensure_data_directories,
+    setup_logging,
+)
 from indicators.technicals import sma  # assumes sma(df, window) -> pandas.Series
+from repository.prices_repository import (
+    fetch_and_cache_prices,
+    get_prices_for_backtest,
+    load_local_prices,
+)
+from research.experiments.optuna_ma_optimization import optimize_ma_strategy_for_symbol
 from trading_backtester.backtester import Backtester
 from trading_backtester.portfolio_backtester import PortfolioBacktester
-<<<<<<< ours
-from config.settings import ALPHA_VANTAGE_API_KEY, setup_logging
-=======
-from config.settings import ALPHA_VANTAGE_API_KEY, ensure_data_directories, setup_logging
->>>>>>> theirs
-from research.experiments.optuna_ma_optimization import optimize_ma_strategy_for_symbol
 
 
 logger = logging.getLogger(__name__)
@@ -55,6 +59,18 @@ def _default_windows(config: Dict[str, Any], strategy_name: str | None) -> tuple
     return params.get("short_window"), params.get("long_window")
 
 
+def _coerce_data_source(value: str | PriceDataSource | None) -> PriceDataSource:
+    if value is None:
+        return DEFAULT_PRICE_DATA_SOURCE
+    if isinstance(value, PriceDataSource):
+        return value
+    try:
+        return PriceDataSource(value.lower())
+    except ValueError as exc:  # noqa: PERF203 - simple validation guard
+        valid = ", ".join(ds.value for ds in PriceDataSource)
+        raise ValueError(f"Unsupported data source '{value}'. Valid options: {valid}") from exc
+
+
 def parse_args(strategy_config: Dict[str, Any]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Run trading strategy backtests")
     parser.add_argument("--symbol", help="Symbol or comma-separated symbols to backtest")
@@ -80,6 +96,12 @@ def parse_args(strategy_config: Dict[str, Any]) -> argparse.Namespace:
         "--allow-interactive",
         action="store_true",
         help="Allow interactive prompts even when stdin is not a TTY",
+    )
+    parser.add_argument(
+        "--data-source",
+        choices=[ds.value for ds in PriceDataSource],
+        default=PriceDataSource.FMP.value,
+        help="Price data source to use (default: fmp).",
     )
 
     defaults = _default_windows(strategy_config, strategy_config.get("default_strategy"))
@@ -137,6 +159,7 @@ def run_backtest(
     symbol: str,
     short_window: int | None = None,
     long_window: int | None = None,
+    data_source: str | PriceDataSource | None = PriceDataSource.FMP,
     outputsize: str = "compact",
     *,
     free_tier_only: bool = True,
@@ -155,58 +178,35 @@ def run_backtest(
     df = None
     active_strategy_name = strategy_name
 
-    cache_outputsize_candidates = [outputsize]
-    if free_tier_only and outputsize == "full":
-        cache_outputsize_candidates.append("compact")
+    source = _coerce_data_source(data_source)
 
-    if use_cache and not force_refresh:
-        for candidate_outputsize in cache_outputsize_candidates:
-            df = load_cached_daily(symbol, outputsize=candidate_outputsize)
-            if df is not None:
-                cache_loaded = True
-                outputsize = candidate_outputsize
-                if candidate_outputsize != cache_outputsize_candidates[0]:
-                    logger.info(
-                        "Using cached data for %s with fallback outputsize='%s' due to free-tier mode.",
-                        symbol,
-                        candidate_outputsize,
-                    )
-                break
-
-    if df is None:
-        effective_outputsize = outputsize
-        if free_tier_only and outputsize == "full":
-            logger.info("Free tier mode: forcing outputsize='compact' to limit data usage.")
-            effective_outputsize = "compact"
-
-        if use_cache and not force_refresh:
-            logger.info(
-                "No cache found for %s. Fetching from Alpha Vantage and seeding cache.",
-                symbol,
-            )
-        elif use_cache and force_refresh:
-            logger.info("Force refresh enabled for %s. Fetching from Alpha Vantage.", symbol)
+    if use_cache:
+        if force_refresh:
+            logger.info("Force refresh enabled for %s. Fetching from %s and updating cache.", symbol, source.value)
+            df = fetch_and_cache_prices(symbol, data_source=source)
+            cache_seeded = True
         else:
-            logger.info("Fetching live data for %s from Alpha Vantage.", symbol)
-
-        if not ALPHA_VANTAGE_API_KEY:
-            raise RuntimeError(
-                "ALPHA_VANTAGE_API_KEY is not set and no cached data is available. "
-                "Add it to your environment or .env file to fetch data."
-            )
-
-        client = AlphaVantageClient(ALPHA_VANTAGE_API_KEY)
-        df = client.get_daily(
-            symbol=symbol,
-            outputsize=effective_outputsize,
-            fallback_to_free_tier=free_tier_only,
+            local_df = load_local_prices(symbol)
+            if not local_df.empty:
+                logger.info("Loaded cached prices for %s from local repository.", symbol)
+                df = local_df
+                cache_loaded = True
+            else:
+                logger.info("No local prices found for %s. Fetching from %s and caching.", symbol, source.value)
+                df = fetch_and_cache_prices(symbol, data_source=source)
+                cache_seeded = True
+    else:
+        logger.info("Fetching %s prices from %s without using the local repository.", symbol, source.value)
+        df = get_prices_for_backtest(
+            symbol,
+            use_local_repository=False,
+            data_source=source,
         )
 
-        if use_cache:
-            save_cached_daily(symbol, df, outputsize=effective_outputsize)
-            cache_seeded = True
+    if df is None or df.empty:
+        raise RuntimeError(f"No price data available for {symbol} from source {source.value}.")
 
-    data_source = "cache" if cache_loaded else "api"
+    source_name = source.value if not cache_loaded else "local_repository"
 
     # 2. Compute indicators needed by the strategy and for chart overlays
     if short_window:
@@ -243,7 +243,7 @@ def run_backtest(
 
     results.update(
         {
-            "data_source": data_source,
+            "data_source": source_name,
             "cache_used": cache_loaded,
             "cache_seeded": cache_seeded,
             "force_refresh": force_refresh,
@@ -410,10 +410,11 @@ def main():
     if len(symbols) == 1:
         symbol = symbols[0]
         results = run_backtest(
-            symbol,
-            short_window,
-            long_window,
-            outputsize,
+            symbol=symbol,
+            short_window=short_window,
+            long_window=long_window,
+            data_source=args.data_source,
+            outputsize=outputsize,
             strategy_name=selected_strategy,
             force_refresh=force_refresh,
             use_cache=use_cache,
@@ -445,10 +446,11 @@ def main():
             logger.info("--- %s ---", symbol)
             try:
                 results = run_backtest(
-                    symbol,
-                    short_window,
-                    long_window,
-                    outputsize,
+                    symbol=symbol,
+                    short_window=short_window,
+                    long_window=long_window,
+                    data_source=args.data_source,
+                    outputsize=outputsize,
                     strategy_name=selected_strategy,
                     force_refresh=force_refresh,
                     use_cache=use_cache,
