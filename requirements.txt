@@ -9,3 +9,6 @@ PyYAML
 stratestic
 optuna
 scikit-learn
+yfinance
+python-dateutil
+pydantic

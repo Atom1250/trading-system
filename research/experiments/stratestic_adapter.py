@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
 
 import pandas as pd
-from stratestic.data import PriceSeries
+
+if TYPE_CHECKING:  # pragma: no cover - typing-only import
+    from stratestic.data import PriceSeries
 
 
 _REQUIRED_COLUMNS: set[str] = {"open", "high", "low", "close", "volume"}
@@ -19,7 +22,7 @@ def _validate_ohlcv_dataframe(df: pd.DataFrame) -> None:
         raise TypeError("DataFrame index must be a pandas.DatetimeIndex")
 
 
-def dataframe_to_stratestic_timeseries(df: pd.DataFrame) -> PriceSeries:
+def dataframe_to_stratestic_timeseries(df: pd.DataFrame) -> "PriceSeries":
     """
     Convert an OHLCV ``DataFrame`` into Stratestic's canonical :class:`~stratestic.data.PriceSeries`.
 
@@ -39,6 +42,8 @@ def dataframe_to_stratestic_timeseries(df: pd.DataFrame) -> PriceSeries:
     """
 
     _validate_ohlcv_dataframe(df)
+
+    from stratestic.data import PriceSeries
 
     normalized = df.loc[:, _REQUIRED_COLUMNS].sort_index()
     return PriceSeries.from_ohlcv(

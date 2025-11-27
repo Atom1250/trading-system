@@ -14,7 +14,11 @@ from ingestion.cache import load_cached_daily, save_cached_daily
 from indicators.technicals import sma  # assumes sma(df, window) -> pandas.Series
 from trading_backtester.backtester import Backtester
 from trading_backtester.portfolio_backtester import PortfolioBacktester
+<<<<<<< ours
 from config.settings import ALPHA_VANTAGE_API_KEY, setup_logging
+=======
+from config.settings import ALPHA_VANTAGE_API_KEY, ensure_data_directories, setup_logging
+>>>>>>> theirs
 from research.experiments.optuna_ma_optimization import optimize_ma_strategy_for_symbol
 
 
@@ -306,6 +310,7 @@ def main():
     Simple console-based UI that asks the user for inputs.
     This replaces the strict command-line-argument approach that caused the error.
     """
+    ensure_data_directories()
     setup_logging()
     logger.info("=== Trading System Runner ===")
 

@@ -15,6 +15,13 @@ venv/
 # Data and reports generated artifacts
 reports/*.csv
 data/*
+!data/prices/
+!data/fundamentals/
+!data/universe/
+data/prices/*
+data/fundamentals/*
+data/universe/*
+!data/**/.gitkeep
 data_cache/
 logs/
 
