@@ -1,11 +1,11 @@
-"""Utility for running a single-symbol Stratestic backtest using Alpha Vantage data."""
+"""Utility for running a single-symbol Stratestic backtest using FMP data."""
 
 from __future__ import annotations
 
 from typing import Any, Dict, TYPE_CHECKING
 
 from config import settings
-from ingestion.alpha_vantage_client import AlphaVantageClient
+from ingestion.fmp_client import FMPClient
 from research.experiments.stratestic_adapter import dataframe_to_stratestic_timeseries
 from research.strategies.ma_crossover_stratestic import build_ma_crossover_strategy
 
@@ -14,9 +14,9 @@ if TYPE_CHECKING:  # pragma: no cover - typing-only import
 
 
 def _require_api_key() -> str:
-    api_key = settings.ALPHA_VANTAGE_API_KEY
+    api_key = settings.FMP_API_KEY
     if not api_key:
-        raise RuntimeError("Set ALPHA_VANTAGE_API_KEY in your environment or .env file.")
+        raise RuntimeError("Set FMP_API_KEY in your environment or .env file.")
     return api_key
 
 
@@ -24,12 +24,12 @@ def run_stratestic_backtest_for_symbol(
     symbol: str,
     short_window: int,
     long_window: int,
-    output_size: str = "compact",
+    limit: int = 5000,
 ) -> Dict[str, Any]:
     """
     Run a moving-average crossover backtest for a single symbol using Stratestic.
 
-    The function downloads OHLCV data via Alpha Vantage, converts it into
+    The function downloads OHLCV data via FinancialModelingPrep, converts it into
     Stratestic's :class:`~stratestic.data.PriceSeries`, executes the Stratestic-native
     moving average crossover strategy, and returns a summary of key performance
     metrics for downstream optimization workflows.
@@ -37,8 +37,8 @@ def run_stratestic_backtest_for_symbol(
 
     api_key = _require_api_key()
 
-    client = AlphaVantageClient(api_key=api_key)
-    raw_data = client.get_daily(symbol, output_size=output_size)
+    client = FMPClient(api_key=api_key)
+    raw_data = client.get_daily(symbol, limit=limit)
 
     price_series = dataframe_to_stratestic_timeseries(raw_data)
     strategy = build_ma_crossover_strategy(short_window=short_window, long_window=long_window)

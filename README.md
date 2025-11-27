@@ -1,6 +1,6 @@
 # Trading System
 
-A research-focused trading strategy backtesting prototype using Alpha Vantage data, Streamlit for optional UI, and containerized execution via Docker.
+A research-focused trading strategy backtesting prototype using FinancialModelingPrep (FMP) data, Streamlit for optional UI, and containerized execution via Docker.
 
 ## Requirements
 - Python 3.10 (recommended) or newer
@@ -10,7 +10,7 @@ A research-focused trading strategy backtesting prototype using Alpha Vantage da
   - analysis/plotting: `matplotlib`, `quantstats`
   - indicators/backtesting: `ta`, `backtesting`
   - configuration/UI: `python-dotenv`, `PyYAML`, `streamlit`
-- Alpha Vantage API key provided via environment variable `ALPHA_VANTAGE_API_KEY` (stored in a local `.env` based on `.env.example`)
+- FMP API key provided via environment variable `FMP_API_KEY` (stored in a local `.env` based on `.env.example`)
 
 Install dependencies with:
 
@@ -43,7 +43,7 @@ python -m pip install -r requirements.txt
 ```
 
 ## Local Usage (Console)
-1. Create a `.env` file (copy `.env.example`) and set `ALPHA_VANTAGE_API_KEY`.
+1. Create a `.env` file (copy `.env.example`) and set `FMP_API_KEY`.
 2. Run the console workflow:
 
 ```bash
@@ -62,7 +62,7 @@ streamlit run ui_streamlit.py --server.address=0.0.0.0 --server.port=8501
 3. Open the provided URL in a browser, choose symbol(s), select the data source (cached vs. live API), and run the backtest.
 
 ## Caching
-The app can cache Alpha Vantage daily data under `data_cache/` to reduce API calls. Use the Streamlit data source toggle or console options to run from cache, and optionally refresh the cache from the API.
+The app caches price history under `data/prices/` when using the repository-backed mode. Use the Streamlit data source toggle or console options to run from cache, and optionally refresh the cache from the FMP API.
 
 ## Docker
 A slim Python 3.10 image is provided for containerized runs.
@@ -75,7 +75,7 @@ docker build -t trading-system .
 ### Run (Console mode)
 ```bash
 docker run --rm -it \
-  -e ALPHA_VANTAGE_API_KEY="<your_key>" \
+  -e FMP_API_KEY="<your_key>" \
   trading-system
 ```
 
@@ -83,7 +83,7 @@ docker run --rm -it \
 ```bash
 docker run --rm -it \
   -e RUN_MODE=streamlit \
-  -e ALPHA_VANTAGE_API_KEY="<your_key>" \
+  -e FMP_API_KEY="<your_key>" \
   -p 8501:8501 \
   trading-system
 ```

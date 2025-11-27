@@ -16,11 +16,8 @@ from config.settings import (
     setup_logging,
 )
 from indicators.technicals import sma  # assumes sma(df, window) -> pandas.Series
-from repository.prices_repository import (
-    fetch_and_cache_prices,
-    get_prices_for_backtest,
-    load_local_prices,
-)
+from repository.fundamentals_repository import get_fundamentals
+from repository.prices_repository import get_prices_for_backtest
 from research.experiments.optuna_ma_optimization import optimize_ma_strategy_for_symbol
 from trading_backtester.backtester import Backtester
 from trading_backtester.portfolio_backtester import PortfolioBacktester
@@ -76,11 +73,6 @@ def parse_args(strategy_config: Dict[str, Any]) -> argparse.Namespace:
     parser.add_argument("--symbol", help="Symbol or comma-separated symbols to backtest")
     parser.add_argument("--short-window", type=int, dest="short_window", help="Short moving average window")
     parser.add_argument("--long-window", type=int, dest="long_window", help="Long moving average window")
-    parser.add_argument(
-        "--outputsize",
-        choices=["compact", "full"],
-        help="Alpha Vantage output size (compact for free tier)",
-    )
     parser.add_argument("--strategy", help="Strategy name defined in config/strategies.yaml")
     parser.add_argument(
         "--force-refresh",
@@ -97,12 +89,6 @@ def parse_args(strategy_config: Dict[str, Any]) -> argparse.Namespace:
         action="store_true",
         help="Allow interactive prompts even when stdin is not a TTY",
     )
-    parser.add_argument(
-        "--data-source",
-        choices=[ds.value for ds in PriceDataSource],
-        default=PriceDataSource.FMP.value,
-        help="Price data source to use (default: fmp).",
-    )
 
     defaults = _default_windows(strategy_config, strategy_config.get("default_strategy"))
     parser.set_defaults(default_short_window=defaults[0], default_long_window=defaults[1])
@@ -114,6 +100,7 @@ def build_strategy(
     strategy_name: str | None,
     *,
     override_params: Dict[str, Any] | None = None,
+    fundamentals: Dict[str, Any] | None = None,
     config_path: str = STRATEGY_CONFIG_PATH,
 ):
     """Instantiate a strategy dynamically based on YAML configuration."""
@@ -152,7 +139,11 @@ def build_strategy(
         logger.error("Strategy class %s not found in module %s", class_name, module_name)
         raise
 
-    return strategy_class(**params), chosen_strategy
+    try:
+        return strategy_class(**params, fundamentals=fundamentals), chosen_strategy
+    except TypeError:
+        # Strategy may not accept fundamentals; fall back.
+        return strategy_class(**params), chosen_strategy
 
 
 def run_backtest(
@@ -160,11 +151,9 @@ def run_backtest(
     short_window: int | None = None,
     long_window: int | None = None,
     data_source: str | PriceDataSource | None = PriceDataSource.FMP,
-    outputsize: str = "compact",
     *,
-    free_tier_only: bool = True,
-    use_cache: bool = True,
-    force_refresh: bool = False,
+    use_local_repository: bool = True,
+    fundamentals: Dict[str, Any] | None = None,
     strategy_name: str | None = None,
     strategy_params: Dict[str, Any] | None = None,
 ):
@@ -173,40 +162,21 @@ def run_backtest(
     This is called by both the console UI and the Streamlit UI.
     """
     # 1. Download data (cache-aware)
-    cache_loaded = False
-    cache_seeded = False
-    df = None
     active_strategy_name = strategy_name
 
     source = _coerce_data_source(data_source)
 
-    if use_cache:
-        if force_refresh:
-            logger.info("Force refresh enabled for %s. Fetching from %s and updating cache.", symbol, source.value)
-            df = fetch_and_cache_prices(symbol, data_source=source)
-            cache_seeded = True
-        else:
-            local_df = load_local_prices(symbol)
-            if not local_df.empty:
-                logger.info("Loaded cached prices for %s from local repository.", symbol)
-                df = local_df
-                cache_loaded = True
-            else:
-                logger.info("No local prices found for %s. Fetching from %s and caching.", symbol, source.value)
-                df = fetch_and_cache_prices(symbol, data_source=source)
-                cache_seeded = True
-    else:
-        logger.info("Fetching %s prices from %s without using the local repository.", symbol, source.value)
-        df = get_prices_for_backtest(
-            symbol,
-            use_local_repository=False,
-            data_source=source,
-        )
+    df = get_prices_for_backtest(
+        symbol=symbol,
+        use_local_repository=use_local_repository,
+        data_source=source,
+    )
 
     if df is None or df.empty:
-        raise RuntimeError(f"No price data available for {symbol} from source {source.value}.")
+        print("Error: No data available for the selected source. Check your repository, symbol, or API key.")
+        sys.exit(1)
 
-    source_name = source.value if not cache_loaded else "local_repository"
+    source_name = PriceDataSource.LOCAL_REPOSITORY.value if use_local_repository else source.value
 
     # 2. Compute indicators needed by the strategy and for chart overlays
     if short_window:
@@ -220,9 +190,11 @@ def run_backtest(
         override_params["short_window"] = short_window
     if long_window is not None and (not override_params or "long_window" in override_params):
         override_params["long_window"] = long_window
+    if fundamentals is None and use_local_repository:
+        fundamentals = get_fundamentals(symbol, use_local_repository=True)
     try:
         strategy, active_strategy_name = build_strategy(
-            strategy_name, override_params=override_params
+            strategy_name, override_params=override_params, fundamentals=fundamentals
         )
     except Exception as exc:
         logger.error("Failed to load strategy: %s", exc)
@@ -244,9 +216,6 @@ def run_backtest(
     results.update(
         {
             "data_source": source_name,
-            "cache_used": cache_loaded,
-            "cache_seeded": cache_seeded,
-            "force_refresh": force_refresh,
             "strategy": active_strategy_name,
         }
     )
@@ -265,6 +234,32 @@ def _choose_mode(interactive: bool) -> str:
 
     logger.info("Non-interactive mode detected; defaulting to single backtest (mode 1).")
     return "1"
+
+
+def _choose_data_source(interactive: bool) -> tuple[bool, PriceDataSource]:
+    """Prompt user to select price data source."""
+
+    if not interactive:
+        source = DEFAULT_PRICE_DATA_SOURCE
+        return (source == PriceDataSource.LOCAL_REPOSITORY, source)
+
+    while True:
+        choice = input(
+            "Choose price data source:\n"
+            "  [1] Local historical repository (recommended)\n"
+            "  [2] FMP API (live)\n"
+            "  [3] Yahoo Finance (live)\n"
+            "Selection: "
+        ).strip() or "1"
+
+        if choice == "1":
+            return True, PriceDataSource.LOCAL_REPOSITORY
+        if choice == "2":
+            return False, PriceDataSource.FMP
+        if choice == "3":
+            return False, PriceDataSource.YAHOO_FINANCE
+
+        print("Invalid choice. Please enter 1, 2, or 3.")
 
 
 def _run_optuna_mode() -> None:
@@ -314,7 +309,10 @@ def main():
     setup_logging()
     logger.info("=== Trading System Runner ===")
 
-    mode_choice = _choose_mode(sys.stdin.isatty())
+    interactive_allowed = sys.stdin.isatty()
+    use_local_repository, selected_data_source = _choose_data_source(interactive_allowed)
+
+    mode_choice = _choose_mode(interactive_allowed)
 
     if mode_choice == "2":
         _run_optuna_mode()
@@ -331,7 +329,7 @@ def main():
     strategy_names = list(strategies.keys())
 
     args = parse_args(strategy_config)
-    interactive_allowed = sys.stdin.isatty() or args.allow_interactive
+    interactive_allowed = interactive_allowed or args.allow_interactive
 
     raw_symbols = args.symbol
     if not raw_symbols and interactive_allowed:
@@ -375,15 +373,6 @@ def main():
         logger.error("Short window must be smaller than long window.")
         return
 
-    outputsize = args.outputsize.lower() if args.outputsize else ""
-    if not outputsize and interactive_allowed:
-        outputsize = input("Output size 'compact' or 'full' [compact]: ").strip().lower()
-    if outputsize == "":
-        outputsize = "compact"
-    if outputsize not in ("compact", "full"):
-        logger.warning("Invalid output size, defaulting to 'compact'.")
-        outputsize = "compact"
-
     selected_strategy = args.strategy or ""
     if not selected_strategy and interactive_allowed:
         strategy_prompt = (
@@ -402,9 +391,6 @@ def main():
         )
         selected_strategy = default_strategy
 
-    force_refresh = args.force_refresh
-    use_cache = not args.no_cache
-
     logger.info("Running backtest...")
 
     if len(symbols) == 1:
@@ -413,11 +399,9 @@ def main():
             symbol=symbol,
             short_window=short_window,
             long_window=long_window,
-            data_source=args.data_source,
-            outputsize=outputsize,
+            data_source=selected_data_source,
+            use_local_repository=use_local_repository,
             strategy_name=selected_strategy,
-            force_refresh=force_refresh,
-            use_cache=use_cache,
         )
 
         # Expected keys in results: 'cumulative_return', 'max_drawdown'
@@ -449,11 +433,9 @@ def main():
                     symbol=symbol,
                     short_window=short_window,
                     long_window=long_window,
-                    data_source=args.data_source,
-                    outputsize=outputsize,
+                    data_source=selected_data_source,
+                    use_local_repository=use_local_repository,
                     strategy_name=selected_strategy,
-                    force_refresh=force_refresh,
-                    use_cache=use_cache,
                 )
             except Exception as exc:  # surface per-symbol errors without stopping all
                 logger.error("Error running backtest for %s: %s", symbol, exc)

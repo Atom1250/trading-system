@@ -8,14 +8,12 @@ from typing import Any
 import pandas as pd
 from dateutil import parser
 
-from config import settings
 from config.settings import (
     DEFAULT_PRICE_DATA_SOURCE,
     PRICE_DATA_DIR,
     PriceDataSource,
     ensure_data_directories,
 )
-from ingestion.alpha_vantage_client import AlphaVantageClient
 from ingestion.fmp_client import FMPClient
 from ingestion.yahoo_finance_client import YahooFinanceClient
 
@@ -110,11 +108,6 @@ def _source_to_value(data_source: PriceDataSource | Any | None) -> str:
 
 
 def _fetch_prices_from_source(symbol: str, source_value: str) -> pd.DataFrame:
-    if source_value == PriceDataSource.ALPHA_VANTAGE.value:
-        logger.info("Fetching %s prices from Alpha Vantage", symbol)
-        client = AlphaVantageClient(settings.ALPHA_VANTAGE_API_KEY)
-        return client.get_daily(symbol, output_size="full")
-
     if source_value == PriceDataSource.YAHOO_FINANCE.value:
         logger.info("Fetching %s prices from Yahoo Finance", symbol)
         return YahooFinanceClient().get_daily(symbol)
@@ -136,7 +129,7 @@ def fetch_and_cache_prices(
 ) -> pd.DataFrame:
     """
     Fetch full historical prices for `symbol` from the chosen data source
-    (Alpha Vantage, Yahoo Finance, or FMP), then save to the local repository.
+    (Yahoo Finance or FMP), then save to the local repository.
     Returns the full DataFrame.
     """
     source_value = _source_to_value(data_source)
