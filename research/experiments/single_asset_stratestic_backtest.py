@@ -2,16 +2,15 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict
+from typing import Any, Dict, TYPE_CHECKING
 
 from config import settings
 from ingestion.alpha_vantage_client import AlphaVantageClient
 from research.experiments.stratestic_adapter import dataframe_to_stratestic_timeseries
 from research.strategies.ma_crossover_stratestic import build_ma_crossover_strategy
 
-# Stratestic runtime imports
-from stratestic.execution import BacktestEngine
-from stratestic.metrics import PerformanceReport
+if TYPE_CHECKING:  # pragma: no cover - typing-only import
+    from stratestic.metrics import PerformanceReport
 
 
 def _require_api_key() -> str:
@@ -43,6 +42,9 @@ def run_stratestic_backtest_for_symbol(
 
     price_series = dataframe_to_stratestic_timeseries(raw_data)
     strategy = build_ma_crossover_strategy(short_window=short_window, long_window=long_window)
+
+    from stratestic.execution import BacktestEngine
+    from stratestic.metrics import PerformanceReport
 
     engine = BacktestEngine(prices=price_series, strategy=strategy)
     run_result = engine.run()
