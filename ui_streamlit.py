@@ -250,7 +250,7 @@ if mode == "Single Backtest":
 
             if "results_path" in results:
                 st.write(f"Detailed results saved to: `{results['results_path']}`")
-            if results.get("data_source") == "fmp" and not use_cache:
+            if results.get("data_source") == PriceDataSource.FMP.value and not use_local_repository:
                 st.warning("Data fetched directly from FMP (cache bypassed).")
 
             results_df = None
