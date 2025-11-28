@@ -32,7 +32,9 @@ class YahooFinanceClient:
             raw = yf.download(symbol, start=start, end=end, **download_kwargs)
 
         if raw.empty:
-            return raw
+            return pd.DataFrame(
+                columns=["open", "high", "low", "close", "adj_close", "volume"],
+            )
 
         if getattr(raw.index, "tz", None) is not None:
             raw.index = raw.index.tz_localize(None)
