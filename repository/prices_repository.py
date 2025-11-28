@@ -8,6 +8,7 @@ from typing import Any
 import pandas as pd
 from dateutil import parser
 
+from config import settings
 from config.settings import (
     DEFAULT_PRICE_DATA_SOURCE,
     PRICE_DATA_DIR,
@@ -107,6 +108,48 @@ def _source_to_value(data_source: PriceDataSource | Any | None) -> str:
     return getattr(source, "value", str(source)).lower()
 
 
+def _resolve_source_for_symbol(symbol: str, preferred_source: PriceDataSource | Any | None) -> str:
+    """Return a usable source name, falling back when configuration is missing.
+
+    If FMP is requested but the API key is absent, automatically fall back to
+    Yahoo Finance so backtests can still run without manual reconfiguration.
+    """
+
+    source_value = _source_to_value(preferred_source)
+
+    if source_value == PriceDataSource.FMP.value and not settings.FMP_API_KEY:
+        logger.warning(
+            "FMP_API_KEY is not configured; falling back to Yahoo Finance for %s",
+            symbol,
+        )
+        return PriceDataSource.YAHOO_FINANCE.value
+
+    return source_value
+
+
+def _fetch_with_fallback(symbol: str, primary_source: str, fallback_source: str | None) -> pd.DataFrame:
+    """Fetch prices from ``primary_source`` and optionally fall back if empty/errors."""
+
+    def _attempt(source_value: str) -> pd.DataFrame:
+        try:
+            return _fetch_prices_from_source(symbol, source_value)
+        except Exception as exc:  # noqa: BLE001 - log and allow fallback
+            logger.error("Fetching %s prices from %s failed: %s", symbol, source_value, exc)
+            return pd.DataFrame()
+
+    df = _attempt(primary_source)
+    if (df is None or df.empty) and fallback_source and fallback_source != primary_source:
+        logger.info(
+            "Primary source %s returned no data for %s; trying fallback %s",
+            primary_source,
+            symbol,
+            fallback_source,
+        )
+        df = _attempt(fallback_source)
+
+    return df
+
+
 def _fetch_prices_from_source(symbol: str, source_value: str) -> pd.DataFrame:
     if source_value == PriceDataSource.YAHOO_FINANCE.value:
         logger.info("Fetching %s prices from Yahoo Finance", symbol)
@@ -168,8 +211,22 @@ def get_prices_for_backtest(
         if fallback_source in (None, PriceDataSource.LOCAL_REPOSITORY):
             fallback_source = DEFAULT_PRICE_DATA_SOURCE
 
-        return fetch_and_cache_prices(symbol, data_source=fallback_source)
+        primary_value = _resolve_source_for_symbol(symbol, fallback_source)
+        secondary_value = None
+        if primary_value != PriceDataSource.YAHOO_FINANCE.value:
+            secondary_value = PriceDataSource.YAHOO_FINANCE.value
 
-    source_value = _source_to_value(data_source)
+        df = _fetch_with_fallback(symbol, primary_value, secondary_value)
+        if df.empty:
+            return df
+
+        save_local_prices(symbol, df)
+        return df
+
+    source_value = _resolve_source_for_symbol(symbol, data_source)
+    fallback_value = None
+    if source_value != PriceDataSource.YAHOO_FINANCE.value:
+        fallback_value = PriceDataSource.YAHOO_FINANCE.value
+
     logger.info("Fetching %s prices from %s for backtest (no cache).", symbol, source_value)
-    return _fetch_prices_from_source(symbol, source_value)
+    return _fetch_with_fallback(symbol, source_value, fallback_value)
