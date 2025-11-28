@@ -164,7 +164,11 @@ def get_prices_for_backtest(
             return local_df
 
         logger.info("Local prices missing for %s; fetching and caching.", symbol)
-        return fetch_and_cache_prices(symbol, data_source=data_source)
+        fallback_source = data_source
+        if fallback_source in (None, PriceDataSource.LOCAL_REPOSITORY):
+            fallback_source = DEFAULT_PRICE_DATA_SOURCE
+
+        return fetch_and_cache_prices(symbol, data_source=fallback_source)
 
     source_value = _source_to_value(data_source)
     logger.info("Fetching %s prices from %s for backtest (no cache).", symbol, source_value)
