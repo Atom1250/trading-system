@@ -7,8 +7,12 @@ from typing import Optional
 
 from dotenv import find_dotenv, load_dotenv
 
-# Load environment variables from the nearest .env file (repo root or current dir)
+# Load environment variables from the nearest .env file (repo root or current dir),
+# and fall back to a .env next to this file's parent directory.
 DOTENV_PATH = find_dotenv(usecwd=True)
+if not DOTENV_PATH:
+    DOTENV_PATH = (Path(__file__).resolve().parent.parent / ".env").as_posix()
+
 load_dotenv(DOTENV_PATH, override=True)
 
 

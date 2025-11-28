@@ -179,6 +179,13 @@ def run_backtest(
     source_name = PriceDataSource.LOCAL_REPOSITORY.value if use_local_repository else source.value
 
     # 2. Compute indicators needed by the strategy and for chart overlays
+    if "close" not in df.columns and "adj_close" in df.columns:
+        df["close"] = df["adj_close"]
+
+    if "close" not in df.columns:
+        print("Error: No 'close' column available in price data.")
+        sys.exit(1)
+
     if short_window:
         df["sma_short"] = sma(df, window=short_window)
     if long_window:
