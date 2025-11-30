@@ -1,12 +1,15 @@
 """Client for interacting with FinancialModelingPrep API."""
 from __future__ import annotations
 
+import logging
 from typing import Any, Dict, Optional
 
 import pandas as pd
 import requests
 
 from config import settings
+
+logger = logging.getLogger(__name__)
 
 
 class FMPClient:
@@ -15,37 +18,58 @@ class FMPClient:
         api_key: str | None = None,
         *,
         base_url: str | None = None,
+        fallback_base_url: str | None = None,
         session: Optional[requests.Session] = None,
     ) -> None:
         self.api_key = api_key or settings.FMP_API_KEY
         self.base_url = (base_url or settings.FMP_BASE_URL).rstrip("/")
+        self.fallback_base_url = (fallback_base_url or settings.FMP_FALLBACK_BASE_URL).rstrip("/")
         self.session = session or requests.Session()
+
+        self._candidate_base_urls = [self.base_url]
+        if self.fallback_base_url and self.fallback_base_url not in self._candidate_base_urls:
+            self._candidate_base_urls.append(self.fallback_base_url)
 
     def _get_json(self, path: str, params: dict | None = None) -> Any:
         if not self.api_key:
             raise RuntimeError("Missing FMP API key. Set config.settings.FMP_API_KEY or pass api_key.")
 
-        url = f"{self.base_url}/{path.lstrip('/')}"
         query = dict(params or {})
         query["apikey"] = self.api_key
 
-        response = self.session.get(url, params=query, timeout=30)
-        try:
-            response.raise_for_status()
-        except requests.HTTPError as exc:
-            raise RuntimeError(f"FMP request failed [{response.status_code}]: {response.text}") from exc
+        last_error: RuntimeError | None = None
+        for idx, base in enumerate(self._candidate_base_urls):
+            url = f"{base}/{path.lstrip('/')}"
+            if idx > 0:
+                logger.info("Retrying FMP request via fallback base URL %s", base)
 
-        try:
-            payload = response.json()
-        except ValueError as exc:
-            raise RuntimeError("FMP response is not valid JSON") from exc
+            response = self.session.get(url, params=query, timeout=30)
+            try:
+                response.raise_for_status()
+            except requests.HTTPError as exc:
+                last_error = RuntimeError(
+                    f"FMP request failed [{response.status_code}] via {base}: {response.text}"
+                )
+                logger.warning("FMP request to %s failed [%s]: %s", url, response.status_code, response.text)
+                continue
 
-        if isinstance(payload, dict):
-            message = payload.get("Error Message") or payload.get("error") or payload.get("message")
-            if message:
-                raise RuntimeError(f"FMP error: {message}")
+            try:
+                payload = response.json()
+            except ValueError as exc:
+                last_error = RuntimeError("FMP response is not valid JSON")
+                logger.warning("FMP response from %s was not valid JSON", url)
+                continue
 
-        return payload
+            if isinstance(payload, dict):
+                message = payload.get("Error Message") or payload.get("error") or payload.get("message")
+                if message:
+                    last_error = RuntimeError(f"FMP error: {message}")
+                    logger.warning("FMP returned an error from %s: %s", url, message)
+                    continue
+
+            return payload
+
+        raise last_error or RuntimeError("FMP request failed without a specific error message")
 
     def get_daily(
         self,
