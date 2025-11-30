@@ -31,10 +31,13 @@ class YahooFinanceClient:
         else:
             raw = yf.download(symbol, start=start, end=end, **download_kwargs)
 
+        if isinstance(raw.columns, pd.MultiIndex):
+            raw.columns = raw.columns.get_level_values(-1)
+
+        expected_columns = ["open", "high", "low", "close", "adj_close", "volume"]
+
         if raw.empty:
-            return pd.DataFrame(
-                columns=["open", "high", "low", "close", "adj_close", "volume"],
-            )
+            return pd.DataFrame(columns=expected_columns)
 
         if getattr(raw.index, "tz", None) is not None:
             raw.index = raw.index.tz_localize(None)
@@ -48,8 +51,8 @@ class YahooFinanceClient:
                 "Adj Close": "adj_close",
                 "Volume": "volume",
             }
-        )
+        ).reindex(columns=expected_columns)
 
         data = data.dropna(subset=["close"])
 
-        return data[["open", "high", "low", "close", "adj_close", "volume"]]
+        return data[expected_columns]
