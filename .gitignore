@@ -32,3 +32,5 @@ Thumbs.db
 # Workspace Settings
 .vscode/
 
+config/Credentials.json
+
