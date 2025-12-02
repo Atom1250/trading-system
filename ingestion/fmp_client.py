@@ -55,7 +55,16 @@ class FMPClient:
         self.api_key = api_key or os.getenv("FMP_API_KEY")
         if not self.api_key:
             raise ValueError(
-                "FMP_API_KEY is not set. Please set it in your environment or .env file."
+                "FMP_API_KEY is not set.\n\n"
+                "To fix this:\n"
+                "  1. Get a free API key at: https://financialmodelingprep.com/developer/docs/\n"
+                "  2. Add it to your .env file:\n"
+                "     FMP_API_KEY=your_key_here\n"
+                "  3. Or set the environment variable:\n"
+                "     export FMP_API_KEY=your_key_here\n\n"
+                "Alternatively, use Yahoo Finance (no API key required):\n"
+                "  - Set TS_PRICE_DATA_SOURCE=yahoo_finance in your .env file\n"
+                "  - Or select Yahoo Finance when prompted in the console"
             )
 
         self.base_url = (base_url or os.getenv("FMP_BASE_URL", "https://financialmodelingprep.com/stable")).rstrip(

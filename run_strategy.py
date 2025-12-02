@@ -139,11 +139,18 @@ def build_strategy(
         logger.error("Strategy class %s not found in module %s", class_name, module_name)
         raise
 
-    try:
-        return strategy_class(**params, fundamentals=fundamentals), chosen_strategy
-    except TypeError:
-        # Strategy may not accept fundamentals; fall back.
-        return strategy_class(**params), chosen_strategy
+    import inspect
+    sig = inspect.signature(strategy_class.__init__)
+    valid_params = {
+        k: v for k, v in params.items() 
+        if k in sig.parameters or any(p.kind == p.VAR_KEYWORD for p in sig.parameters.values())
+    }
+    
+    # If fundamentals is accepted, pass it
+    if "fundamentals" in sig.parameters or any(p.kind == p.VAR_KEYWORD for p in sig.parameters.values()):
+        return strategy_class(**valid_params, fundamentals=fundamentals), chosen_strategy
+    
+    return strategy_class(**valid_params), chosen_strategy
 
 
 def run_backtest(
@@ -193,12 +200,13 @@ def run_backtest(
 
     # 3. Run strategy
     override_params: Dict[str, Any] = dict(strategy_params or {})
-    if short_window is not None and (not override_params or "short_window" in override_params):
+    if short_window is not None:
         override_params["short_window"] = short_window
-    if long_window is not None and (not override_params or "long_window" in override_params):
+    if long_window is not None:
         override_params["long_window"] = long_window
     if fundamentals is None and use_local_repository:
         fundamentals = get_fundamentals(symbol, use_local_repository=True)
+    
     try:
         strategy, active_strategy_name = build_strategy(
             strategy_name, override_params=override_params, fundamentals=fundamentals
@@ -256,6 +264,7 @@ def _choose_data_source(interactive: bool) -> tuple[bool, PriceDataSource]:
             "  [1] Local historical repository (recommended)\n"
             "  [2] FMP API (live)\n"
             "  [3] Yahoo Finance (live)\n"
+            "  [4] Kaggle (local DB)\n"
             "Selection: "
         ).strip() or "1"
 
@@ -265,8 +274,10 @@ def _choose_data_source(interactive: bool) -> tuple[bool, PriceDataSource]:
             return False, PriceDataSource.FMP
         if choice == "3":
             return False, PriceDataSource.YAHOO_FINANCE
+        if choice == "4":
+            return False, PriceDataSource.KAGGLE
 
-        print("Invalid choice. Please enter 1, 2, or 3.")
+        print("Invalid choice. Please enter 1, 2, 3, or 4.")
 
 
 def _run_optuna_mode() -> None:
