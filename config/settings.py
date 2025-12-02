@@ -20,11 +20,13 @@ class PriceDataSource(str, Enum):
     LOCAL_REPOSITORY = "local_repository"
     YAHOO_FINANCE = "yahoo_finance"
     FMP = "fmp"
+    KAGGLE = "kaggle"
 
 
 # Root data directory
 DATA_ROOT = Path(os.environ.get("TS_DATA_ROOT", "data")).resolve()
 PRICE_DATA_DIR = DATA_ROOT / "prices"
+KAGGLE_DB_PATH = DATA_ROOT / "historical_prices_kaggle.db"
 FUNDAMENTAL_DATA_DIR = DATA_ROOT / "fundamentals"
 UNIVERSE_DIR = DATA_ROOT / "universe"
 
@@ -44,6 +46,10 @@ if not FMP_API_KEY:
     logging.getLogger(__name__).warning(
         "FMP_API_KEY is not set. Loaded .env from %s", DOTENV_PATH or "environment"
     )
+
+# Strategy configuration path
+STRATEGY_CONFIG_PATH = str((Path(__file__).resolve().parent / "strategies.yaml"))
+
 
 
 def ensure_data_directories() -> None:

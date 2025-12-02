@@ -1,0 +1,34 @@
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=sqlite:///./trading_system.db
+      - FMP_API_KEY=${FMP_API_KEY}
+      - TS_DATA_ROOT=/app/data
+      - PYTHONPATH=/app
+    volumes:
+      - ./backend:/app/backend
+      - ./config:/app/config
+      - ./ingestion:/app/ingestion
+      - ./repository:/app/repository
+      - ./backtesting:/app/backtesting
+      - ./indicators:/app/indicators
+      - ./strategy:/app/strategy
+      - ./trading_backtester:/app/trading_backtester
+      - ./utils:/app/utils
+      - ./data:/app/data
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "8501:8501"
+    environment:
+      - BACKEND_URL=http://backend:8000
+    depends_on:
+      - backend
+    volumes:
+      - ./frontend:/app

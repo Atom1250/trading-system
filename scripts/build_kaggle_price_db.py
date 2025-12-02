@@ -15,7 +15,6 @@ from typing import Dict
 
 import pandas as pd
 import kagglehub
-from kagglehub import KaggleDatasetAdapter
 
 DATASET_HANDLE = "nelgiriyewithana/world-stock-prices-daily-updating"
 # Path to a specific file inside the Kaggle dataset, if required (e.g., "data.csv").
@@ -27,20 +26,26 @@ TABLE_NAME = "prices"
 
 def load_raw_kaggle_df() -> pd.DataFrame:
     """Load the raw Kaggle dataset into a pandas DataFrame."""
-    raw = kagglehub.load_dataset(KaggleDatasetAdapter.PANDAS, DATASET_HANDLE, DATASET_FILE_PATH)
-
-    if isinstance(raw, dict):
-        if not raw:
-            raise ValueError("Kaggle dataset returned an empty dictionary of DataFrames.")
-        first_value = next(iter(raw.values()))
-        if not isinstance(first_value, pd.DataFrame):
-            raise ValueError("Expected a pandas DataFrame in the Kaggle dataset dictionary.")
-        return first_value
-
-    if not isinstance(raw, pd.DataFrame):
-        raise ValueError("Kaggle dataset did not return a pandas DataFrame.")
-
-    return raw
+    # Download the dataset files
+    path = kagglehub.dataset_download(DATASET_HANDLE)
+    
+    # Look for the CSV file
+    csv_files = list(Path(path).glob("*.csv"))
+    if not csv_files:
+        raise ValueError(f"No CSV files found in downloaded dataset at {path}")
+    
+    # Use the largest CSV file if multiple exist, or specific one if configured
+    if DATASET_FILE_PATH:
+        target_file = Path(path) / DATASET_FILE_PATH
+        if not target_file.exists():
+            raise ValueError(f"Configured file {DATASET_FILE_PATH} not found in {path}")
+        file_to_load = target_file
+    else:
+        # Default to the largest CSV file
+        file_to_load = max(csv_files, key=lambda p: p.stat().st_size)
+    
+    print(f"Loading data from {file_to_load}...")
+    return pd.read_csv(file_to_load)
 
 
 def _find_column(df: pd.DataFrame, candidates: list[str]) -> str | None:
@@ -70,18 +75,33 @@ def normalise_schema(df: pd.DataFrame) -> pd.DataFrame:
     }
 
     resolved: Dict[str, str] = {}
+    
+    # Create a case-insensitive map of existing columns
+    existing_cols_lower = {col.lower(): col for col in df.columns}
+    
     for canonical, candidates in column_map.items():
-        found = _find_column(df, candidates)
-        if found:
-            resolved[canonical] = found
+        for candidate in candidates:
+            match = existing_cols_lower.get(candidate.lower())
+            if match:
+                resolved[canonical] = match
+                break
 
     missing_required = [col for col in ("symbol", "date", "close") if col not in resolved]
     if missing_required:
         raise ValueError(f"Missing required columns in dataset: {', '.join(missing_required)}")
 
-    renamed = df.rename(columns=resolved)
+    # Invert the map for renaming: {original_name: canonical_name}
+    rename_map = {original: canonical for canonical, original in resolved.items()}
+    renamed = df.rename(columns=rename_map)
 
-    renamed["date"] = pd.to_datetime(renamed["date"]).dt.date
+    # Convert date column to datetime objects (handling timezones)
+    renamed["date"] = pd.to_datetime(renamed["date"], utc=True, errors="coerce")
+    
+    # Drop rows with invalid dates
+    renamed = renamed.dropna(subset=["date"])
+    
+    # Convert to date objects (remove time component and timezone)
+    renamed["date"] = renamed["date"].dt.date
 
     canonical_columns = [col for col in ("symbol", "date", "open", "high", "low", "close", "volume") if col in renamed.columns]
     normalised = renamed.loc[:, canonical_columns]

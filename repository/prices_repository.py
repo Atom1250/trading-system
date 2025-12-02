@@ -8,15 +8,18 @@ from typing import Any
 import pandas as pd
 from dateutil import parser
 
+import sqlite3
 from config import settings
 from config.settings import (
     DEFAULT_PRICE_DATA_SOURCE,
     PRICE_DATA_DIR,
+    KAGGLE_DB_PATH,
     PriceDataSource,
     ensure_data_directories,
 )
 from ingestion.fmp_client import FMPClient
 from ingestion.yahoo_finance_client import YahooFinanceClient
+from utils.data_validation import validate_price_data, clean_price_data
 
 logger = logging.getLogger(__name__)
 
@@ -67,6 +70,29 @@ def load_local_prices(symbol: str) -> pd.DataFrame:
         return pd.DataFrame()
 
     return _normalize_index(df)
+
+
+def load_kaggle_prices(symbol: str) -> pd.DataFrame:
+    """
+    Load historical prices for a symbol from the Kaggle SQLite database.
+    """
+    if not KAGGLE_DB_PATH.exists():
+        logger.warning("Kaggle DB not found at %s. Run scripts/build_kaggle_price_db.py first.", KAGGLE_DB_PATH)
+        return pd.DataFrame()
+
+    try:
+        with sqlite3.connect(KAGGLE_DB_PATH) as conn:
+            query = "SELECT date, open, high, low, close, volume FROM prices WHERE symbol = ?"
+            df = pd.read_sql_query(query, conn, params=(symbol,), parse_dates=["date"], index_col="date")
+            
+        if df.empty:
+            logger.info("No Kaggle data found for %s", symbol)
+            return pd.DataFrame()
+            
+        return _normalize_index(df)
+    except Exception as exc:
+        logger.error("Failed to load Kaggle prices for %s: %s", symbol, exc)
+        return pd.DataFrame()
 
 
 def save_local_prices(symbol: str, df: pd.DataFrame) -> None:
@@ -153,17 +179,31 @@ def _fetch_with_fallback(symbol: str, primary_source: str, fallback_source: str 
 def _fetch_prices_from_source(symbol: str, source_value: str) -> pd.DataFrame:
     if source_value == PriceDataSource.YAHOO_FINANCE.value:
         logger.info("Fetching %s prices from Yahoo Finance", symbol)
-        return YahooFinanceClient().get_daily(symbol)
-
-    if source_value == PriceDataSource.FMP.value:
+        df = YahooFinanceClient().get_daily(symbol)
+    elif source_value == PriceDataSource.FMP.value:
         logger.info("Fetching %s prices from FinancialModelingPrep", symbol)
-        return FMPClient().get_daily(symbol)
-
-    if source_value == PriceDataSource.LOCAL_REPOSITORY.value:
+        df = FMPClient().get_daily(symbol)
+    elif source_value == PriceDataSource.LOCAL_REPOSITORY.value:
         logger.info("Loading %s prices from local repository", symbol)
-        return load_local_prices(symbol)
-
-    raise ValueError(f"Unsupported data source: {source_value}")
+        df = load_local_prices(symbol)
+    elif source_value == PriceDataSource.KAGGLE.value:
+        logger.info("Loading %s prices from Kaggle DB", symbol)
+        df = load_kaggle_prices(symbol)
+    else:
+        raise ValueError(f"Unsupported data source: {source_value}")
+    
+    # Validate and clean the data
+    if not df.empty:
+        is_valid, warnings = validate_price_data(df, symbol)
+        if not is_valid:
+            logger.warning("Data validation failed for %s, attempting to clean", symbol)
+            df = clean_price_data(df, symbol)
+            # Re-validate after cleaning
+            is_valid, warnings = validate_price_data(df, symbol)
+            if not is_valid:
+                logger.error("Data still invalid after cleaning for %s", symbol)
+    
+    return df
 
 
 def fetch_and_cache_prices(

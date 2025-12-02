@@ -72,6 +72,30 @@ Backtest = getattr(_backtesting_module, "Backtest")
 Strategy = getattr(_backtesting_module, "Strategy")
 
 
+class PrecomputedSignalStrategy(Strategy):
+    signal_values = []
+
+    def init(self) -> None:
+        self.signal = self.I(lambda: self.signal_values, name="signal")
+
+    def next(self) -> None:
+        sig = self.signal[-1]
+
+        if sig > 0:
+            if not self.position.is_long:
+                if self.position:
+                    self.position.close()
+                self.buy(size=1)
+        elif sig < 0:
+            if not self.position.is_short:
+                if self.position:
+                    self.position.close()
+                self.sell(size=1)
+        else:
+            if self.position:
+                self.position.close()
+
+
 class Backtester:
     """Run backtests using the ``backtesting.py`` engine."""
 
@@ -102,36 +126,25 @@ class Backtester:
         self._validate_inputs(df)
 
         bt_df = self._prepare_backtesting_frame(df)
-        signal_values = df[self.signal_column].fillna(0).values
+        
+        # Set signal values on the strategy class
+        # Ensure we copy values to avoid reference issues if run multiple times
+        PrecomputedSignalStrategy.signal_values = df[self.signal_column].fillna(0).values
 
-        class PrecomputedSignalStrategy(Strategy):
-            def init(self) -> None:
-                self.signal = self.I(lambda: signal_values, name="signal")
+        print(f"Strategy MRO: {PrecomputedSignalStrategy.mro()}")
 
-            def next(self) -> None:  # pragma: no cover - thin wrapper for backtesting.py
-                sig = self.signal[-1]
-
-                if sig > 0:
-                    if not self.position.is_long:
-                        if self.position:
-                            self.position.close()
-                        self.buy(size=1)
-                elif sig < 0:
-                    if not self.position.is_short:
-                        if self.position:
-                            self.position.close()
-                        self.sell(size=1)
-                else:
-                    if self.position:
-                        self.position.close()
-
+        bt_kwargs = {
+            "cash": self.initial_cash,
+            "commission": self.commission,
+            "exclusive_orders": True,
+        }
+        
+        print(f"Backtesting version: {_backtesting_module.__version__ if hasattr(_backtesting_module, '__version__') else 'unknown'}")
+        
         bt = Backtest(
             bt_df,
             PrecomputedSignalStrategy,
-            cash=self.initial_cash,
-            commission=self.commission,
-            exclusive_orders=True,
-            hedging=False,
+            **bt_kwargs
         )
 
         stats = bt.run()
@@ -170,6 +183,9 @@ class Backtester:
 
         return {
             "results": results,
+            "stats": stats,
+            "equity_curve": equity_curve["Equity"],  # Return just the Equity series
+            "trades": stats["_trades"],
             "cumulative_return": cumulative_return,
             "max_drawdown": max_drawdown,
             "results_path": str(self.results_path),

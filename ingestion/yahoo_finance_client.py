@@ -32,7 +32,9 @@ class YahooFinanceClient:
             raw = yf.download(symbol, start=start, end=end, **download_kwargs)
 
         if isinstance(raw.columns, pd.MultiIndex):
-            raw.columns = raw.columns.get_level_values(-1)
+            # Flatten MultiIndex columns: (Price, Ticker) -> Price
+            # We want level 0 which contains 'Open', 'Close', etc.
+            raw.columns = raw.columns.get_level_values(0)
 
         expected_columns = ["open", "high", "low", "close", "adj_close", "volume"]
 
@@ -41,6 +43,10 @@ class YahooFinanceClient:
 
         if getattr(raw.index, "tz", None) is not None:
             raw.index = raw.index.tz_localize(None)
+
+        # Remove duplicate dates before reindexing (keep last occurrence)
+        if raw.index.duplicated().any():
+            raw = raw[~raw.index.duplicated(keep='last')]
 
         data = raw.rename(
             columns={
