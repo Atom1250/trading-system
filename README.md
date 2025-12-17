@@ -28,6 +28,9 @@ python run_strategy.py
 ✅ **Interactive UI**: Streamlit dashboard with real-time charts  
 ✅ **Multiple Strategies**: Moving Average, MACD, RSI mean reversion  
 ✅ **Portfolio Backtesting**: Multi-symbol portfolio analysis  
+✅ **Strategy Lab**: Advanced rule-based strategies with factor scoring  
+✅ **Risk Engine**: Professional-grade risk management (Drawdown limits, Position Sizing)
+✅ **Portfolio Backtesting**: Multi-symbol portfolio analysis  
 
 ## Requirements
 
@@ -146,11 +149,20 @@ python run_strategy.py --symbol AAPL --strategy moving_average_crossover --short
 # Activate virtual environment
 source .venv/bin/activate
 
-# Launch Streamlit
+# Launch Streamlit (Access Strategy Lab features here)
 streamlit run ui_streamlit.py --server.address=0.0.0.0 --server.port=8501
 ```
 
-Then open your browser to `http://localhost:8501`
+### Strategy Lab (Advanced)
+
+The new Strategy Lab allows for factor-based signal generation and advanced risk management.
+
+```bash
+# Run Strategy Lab backtest (default AAPL)
+python run_strategy.py --mode lab --symbol AAPL
+```
+
+Then open your browser to `http://localhost:8501` (Not 0.0.0.0)
 
 **Features**:
 - Interactive parameter controls

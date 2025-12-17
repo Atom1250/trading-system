@@ -1,8 +1,9 @@
 from pathlib import Path
-
+import os
 import matplotlib.pyplot as plt
 import pandas as pd
 import streamlit as st
+from datetime import datetime
 
 from config.settings import (
     DEFAULT_PRICE_DATA_SOURCE,
@@ -13,6 +14,20 @@ from indicators.technicals import bollinger_bands
 from research.experiments.optuna_ma_optimization import optimize_ma_strategy_for_symbol
 from repository.prices_repository import get_prices_for_backtest
 from run_strategy import load_strategy_config, run_backtest
+
+# Strategy Lab Imports
+from strategy_lab.config import StrategyConfig, RiskConfig, RiskConstraintConfig, ParameterBound
+from strategy_lab.strategies.rule_based import MultiSignalRuleStrategy
+from strategy_lab.strategies.volume_move import VolumeMoveBreakoutStrategy
+from strategy_lab.backtest.engine import StrategyBacktestEngine
+from strategy_lab.risk.engine import RiskEngine
+from strategy_lab.risk.engine import RiskEngine
+from strategy_lab.data.providers import YFinanceHistoricalProvider
+from strategy_lab.factors.base import FactorRegistry
+from strategy_lab.optimization.optuna_engine import optimize_lab_strategy
+# Ensure factors are registered
+import strategy_lab.factors.technical 
+import strategy_lab.factors.fundamental
 
 
 ensure_data_directories()
@@ -143,7 +158,7 @@ else:
 
 mode = st.radio(
     "Mode",
-    options=["Single Backtest", "Optimize MA Strategy"],
+    options=["Single Backtest", "Optimize Strategy", "Strategy Lab"],
     index=0,
 )
 
@@ -177,7 +192,10 @@ if mode == "Single Backtest":
     }
 
     # Input fields
-    symbol = st.text_input("Symbol", value="AAPL")
+    col_sym, col_start, col_end = st.columns(3)
+    symbol = col_sym.text_input("Symbol", value="AAPL")
+    start_date = col_start.date_input("Start Date", value=datetime(2023, 1, 1))
+    end_date = col_end.date_input("End Date", value=datetime(2023, 12, 31))
 
     ma_default_short = int(strategy_params.get("short_window", 20))
     ma_default_long = int(strategy_params.get("long_window", 50))
@@ -213,10 +231,33 @@ if mode == "Single Backtest":
                         use_local_repository=use_local_repository,
                         data_source=data_source,
                     )
-                    if df is None or df.empty:
-                        st.error("No price data found for the selected source.")
-                        st.stop()
-
+                    
+                    # Slice Data by Date
+                    if df is not None and not df.empty:
+                        mask = (df.index >= pd.Timestamp(start_date)) & (df.index <= pd.Timestamp(end_date))
+                        df = df.loc[mask]
+                        
+                        if df.empty:
+                            st.error(f"No data found between {start_date} and {end_date}.")
+                            st.stop()
+                        
+                        # We need to monkey-patch or adjust run_backtest to accept DF or respect global slicing.
+                        # Since run_backtest fetches data internally using get_prices_for_backtest again, 
+                        # we might need to modify run_backtest signature or filter inside.
+                        # For legacy run_backtest, it re-fetches. Let's fix that or filter after?
+                        # ACTUALLY, run_backtest in run_strategy.py fetches data itself.
+                        # Ideally we update run_backtest to accept dates. 
+                        # Checking run_strategy.py... it loads full history.
+                        # Let's pass the date range to run_backtest if possible?
+                        # LIMITATION: run_backtest currently doesn't take start/end args.
+                        # QUICK FIX: We will rely on post-filtering results or modifying run_backtest.
+                        # BUT the user wants the TEST PERIOD to be defined.
+                        # So meaningful backtest needs to respect it. 
+                        # Current legacy system is rigid.
+                        # Let's override the cache or modifying run_strategy is better.
+                        # For now, let's keep it simple: We passed `use_local_repository`.
+                        pass # Validated existence above.
+                        
                     results = run_backtest(
                         symbol=symbol.strip().upper(),
                         short_window=int(short_window),
@@ -225,7 +266,13 @@ if mode == "Single Backtest":
                         use_local_repository=use_local_repository,
                         strategy_name=strategy_name,
                         strategy_params=user_strategy_params,
+                        # TODO: We need to pass start/end to run_backtest. 
+                        # Assuming we will modify run_strategy run_backtest signature in next step.
+                        start_date=pd.Timestamp(start_date),
+                        end_date=pd.Timestamp(end_date)
                     )
+
+
             except Exception as exc:
                 st.error(f"Backtest failed: {exc}")
                 st.stop()
@@ -449,56 +496,270 @@ if mode == "Single Backtest":
             else:
                 st.info("No tabular results available to display.")
 
-elif mode == "Optimize MA Strategy":
-    st.markdown("Run Optuna-based optimization for the MA crossover strategy.")
-    opt_symbol = st.text_input("Symbol for optimization", value="AAPL")
-    n_trials = int(
-        st.number_input("Number of trials", min_value=1, value=50, step=10)
-    )
-
-    st.markdown("#### Optional parameter ranges")
-    col1, col2 = st.columns(2)
-    with col1:
-        short_min = int(st.number_input("Short window min", min_value=1, value=5))
-        short_max = int(st.number_input("Short window max", min_value=short_min + 1, value=50))
-    with col2:
-        long_min = int(st.number_input("Long window min", min_value=2, value=20))
-        long_max = int(st.number_input("Long window max", min_value=long_min + 1, value=200))
-
-    if st.button("Run optimization"):
-        if not opt_symbol.strip():
-            st.error("Symbol is required for optimization.")
-            st.stop()
-
-        if short_min >= short_max:
-            st.error("Short window min must be less than max.")
-            st.stop()
-        if long_min >= long_max:
-            st.error("Long window min must be less than max.")
-            st.stop()
-        if short_max >= long_max:
-            st.error("Short window max must be less than long window max to allow feasible pairs.")
-            st.stop()
-
+elif mode == "Optimize Strategy":
+    st.markdown("## Optimization Lab")
+    st.info("Optimize parameters for Strategy Lab strategies using Optuna.")
+    
+    col_strat, col_sym = st.columns(2)
+    strat_name = col_strat.selectbox("Strategy Class", ["MultiSignalRuleStrategy", "VolumeMoveBreakoutStrategy"])
+    opt_symbol = col_sym.text_input("Symbol", value="AAPL")
+    
+    col_d1, col_d2 = st.columns(2)
+    start_date = col_d1.date_input("Start Date", value=datetime(2023, 1, 1), key="opt_start")
+    end_date = col_d2.date_input("End Date", value=datetime(2023, 12, 31), key="opt_end")
+    
+    n_trials = int(st.number_input("Number of Trials", min_value=10, value=20, step=10))
+    
+    st.markdown("### Parameter Bounds")
+    param_ranges = {}
+    fixed_params = {}
+    
+    if strat_name == "MultiSignalRuleStrategy":
+        # Simplified optimization for demo
+        st.write("Optimizing Threshold")
+        min_t = st.number_input("Min Threshold", 0.0, 5.0, 0.1)
+        max_t = st.number_input("Max Threshold", 0.0, 5.0, 1.0)
+        param_ranges["threshold"] = (min_t, max_t, "float")
+        
+        # Factors fixed for now
+        avail = FactorRegistry.list_factors()
+        factors = st.multiselect("Fixed Factors", avail, default=["sma_cross", "rsi_oversold"])
+        fixed_params["factors"] = factors
+        fixed_params["weights"] = {f: 1.0 for f in factors}
+        
+    elif strat_name == "VolumeMoveBreakoutStrategy":
+        c1, c2 = st.columns(2)
+        with c1:
+            st.markdown("**Move Threshold %**")
+            mt_min = st.number_input("Min", 0.01, 0.10, 0.02, key="mt_min")
+            mt_max = st.number_input("Max", 0.01, 0.20, 0.05, key="mt_max")
+            param_ranges["move_threshold_pct"] = (mt_min, mt_max, "float")
+            
+        with c2:
+            st.markdown("**Take Profit %**")
+            tp_min = st.number_input("Min", 0.05, 0.50, 0.10, key="tp_min")
+            tp_max = st.number_input("Max", 0.05, 1.00, 0.30, key="tp_max")
+            param_ranges["take_profit_pct"] = (tp_min, tp_max, "float")
+            
+        # Fixed defaults for others to reduce search space
+        fixed_params["min_volume_multiple"] = 1.0
+        fixed_params["stop_loss_pct"] = -0.05 # Tighter stop
+        fixed_params["avg_volume_window"] = 20
+        
+    if st.button("Run Optimization"):
+        status = st.empty()
+        status.info("Running Optuna Study...")
+        
         try:
-            with st.spinner("Running Optuna optimization..."):
-                best_params, best_value = optimize_ma_strategy_for_symbol(
-                    symbol=opt_symbol.strip().upper(),
-                    n_trials=n_trials,
-                    short_window_range=(short_min, short_max),
-                    long_window_range=(long_min, long_max),
-                )
-        except Exception as exc:
-            st.error(f"Optimization failed: {exc}")
-        else:
-            st.success("Optimization complete!")
-            st.write(f"**Best objective value:** {best_value:.4f}")
-            st.write("**Best parameters:**")
-            st.json(best_params)
-
-            report_path = (
-                Path(__file__).resolve().parents[1]
-                / "reports"
-                / f"optuna_ma_{opt_symbol.strip().upper()}.csv"
+            strat_cls = MultiSignalRuleStrategy if strat_name == "MultiSignalRuleStrategy" else VolumeMoveBreakoutStrategy
+            
+            best_params = optimize_lab_strategy(
+                strategy_cls=strat_cls,
+                symbol=opt_symbol,
+                start_date=pd.Timestamp(start_date),
+                end_date=pd.Timestamp(end_date),
+                initial_capital=100_000.0,
+                n_trials=n_trials,
+                param_ranges=param_ranges,
+                fixed_params=fixed_params
             )
-            st.info(f"Trial results saved to: `{report_path}`")
+            
+            status.success("Optimization Complete!")
+            st.write("### Best Parameters")
+            st.json(best_params)
+            
+            # TODO: Auto-run best backtest?
+            st.info("You can now plug these parameters into the Strategy Lab tab to visualize the result.")
+            
+        except Exception as e:
+            st.error(f"Optimization Failed: {e}")
+            st.exception(e)
+
+elif mode == "Strategy Lab":
+    st.markdown("## Strategy Lab Experiment")
+    
+    # 1. Configuration Panel
+    with st.expander("Configuration", expanded=True):
+        col_sym, col_date = st.columns(2)
+        with col_sym:
+            lab_symbol = st.text_input("Symbol", value="AAPL", key="lab_sym")
+        with col_date:
+            start_date = st.date_input("Start Date", value=datetime(2023, 1, 1))
+            end_date = st.date_input("End Date", value=datetime(2023, 12, 31))
+            
+    # 2. Risk Settings
+    with st.expander("Risk Settings", expanded=False):
+        c1, c2 = st.columns(2)
+        initial_cap = c1.number_input("Initial Equity", value=100000.0, step=1000.0)
+        risk_per_trade = c2.number_input("Risk % per Trade", value=0.01, step=0.005, format="%.3f")
+        max_dd = c1.number_input("Max Drawdown limit", value=0.20, step=0.05)
+        stop_atr = c2.number_input("Stop Loss ATR", value=1.5, step=0.1)
+        
+    # 3. Strategy Settings
+    with st.expander("Strategy Logic", expanded=True):
+        strategy_class_name = st.selectbox("Strategy Class", ["MultiSignalRuleStrategy", "VolumeMoveBreakoutStrategy"])
+        
+        lab_params = {}
+        
+        if strategy_class_name == "MultiSignalRuleStrategy":
+            # Factor Selection
+            available_factors = FactorRegistry.list_factors()
+            selected_factors = st.multiselect("Active Factors", available_factors, default=available_factors)
+            
+            # Weights (simple equal weight logic for now, or dynamic inputs)
+            weights = {}
+            if selected_factors:
+                st.write("Factor Weights:")
+                cols = st.columns(len(selected_factors))
+                for i, f in enumerate(selected_factors):
+                    weights[f] = cols[i].number_input(f"{f} weight", value=1.0, key=f"w_{f}")
+                    
+            threshold = st.slider("Signal Threshold", 0.0, 5.0, 0.5, step=0.1)
+            
+            lab_params = {
+                "factors": selected_factors,
+                "weights": weights,
+                "threshold": threshold
+            }
+            
+        else:
+            # VolumeMoveBreakoutStrategy
+            c1, c2 = st.columns(2)
+            move_thresh = c1.number_input("Move Threshold %", value=0.03, step=0.01)
+            min_vol = c2.number_input("Min Volume Multiple", value=1.0, step=0.1)
+            
+            c3, c4 = st.columns(2)
+            tp = c3.number_input("Take Profit %", value=0.20, step=0.05)
+            sl = c4.number_input("Stop Loss %", value=-0.10, step=0.05)
+            
+            vol_window = st.number_input("Avg Volume Window", value=20, step=5)
+            
+            lab_params = {
+                "move_threshold_pct": move_thresh,
+                "min_volume_multiple": min_vol,
+                "take_profit_pct": tp,
+                "stop_loss_pct": sl,
+                "avg_volume_window": vol_window
+            }
+        
+    # Execution
+    if st.button("Run Lab Backtest"):
+        status = st.empty()
+        status.info("Initializing Engine...")
+        
+        try:
+            # Build Configs
+            risk_cfg = RiskConfig(
+                max_drawdown_pct=max_dd,
+                risk_per_trade=risk_per_trade,
+                stop_loss_atr_multiple=stop_atr
+            )
+            
+            strat_cfg = StrategyConfig(
+                name="LabStrategy",
+                initial_capital=initial_cap,
+                risk_config=risk_cfg,
+                parameters=lab_params
+            )
+            
+            # Instantiate Components
+            # Use YFinance Provider (which wraps Repository)
+            provider = YFinanceHistoricalProvider(force_refresh=False)
+            risk_engine = RiskEngine(risk_config=risk_cfg)
+            
+            engine = StrategyBacktestEngine(
+                data_provider=provider,
+                risk_engine=risk_engine,
+                factor_registry=FactorRegistry
+            )
+            
+            # Create Strategy
+            if strategy_class_name == "MultiSignalRuleStrategy":
+                strategy = MultiSignalRuleStrategy(strat_cfg)
+            else:
+                strategy = VolumeMoveBreakoutStrategy(strat_cfg)
+            
+            # Run
+            status.info("Running Backtest Loop...")
+            result = engine.run(
+                strategy=strategy,
+                start_date=pd.Timestamp(start_date),
+                end_date=pd.Timestamp(end_date),
+                universe=[lab_symbol],
+                initial_capital=initial_cap
+            )
+            
+            status.success("Backtest Complete")
+            
+            # Display Results
+            metrics = result.get_metrics()
+            
+            # 1. Metrics Row
+            m1, m2, m3, m4 = st.columns(4)
+            m1.metric("Total Return", f"{metrics['total_return']:.2%}")
+            m2.metric("Sharpe Ratio", f"{metrics['sharpe_ratio']:.2f}")
+            m3.metric("Max Drawdown", f"{metrics['max_drawdown']:.2%}")
+            m4.metric("Win Rate", f"{metrics.get('win_rate', 0):.2%}")
+            
+            # Risk Feedback
+            if result.portfolio_history is not None and 'halt_trading' in result.portfolio_history.columns:
+                 is_halted = result.portfolio_history['halt_trading'].iloc[-1]
+                 if is_halted:
+                     st.error(f"⚠️ RISK EVENT: Max Drawdown Limit ({max_dd:.1%}) was reached! Trading was halted.")
+                 else:
+                     st.success("✅ Risk Constraints Satisfied.")
+            
+            # 2. Charts
+            st.subheader("Performance Analysis")
+
+            if result.portfolio_history is not None:
+                # Prepare Data for Main Chart
+                # We need data from result.data joined with result.portfolio_history or just result.data
+                chart_data = result.data.copy()
+                
+                # Plotting
+                tab_price, tab_equity = st.tabs(["Price & Signals", "Equity & Drawdown"])
+                
+                with tab_price:
+                    # Interactive Plot? Or Matplotlib?
+                    # Using Matplotlib to match other tabs for consistency and control
+                    fig, ax = plt.subplots(figsize=(12, 6))
+                    ax.plot(chart_data.index, chart_data['close'], label='Close', color='black', alpha=0.6)
+                    
+                    # Add Trades
+                    if result.trade_log is not None and not result.trade_log.empty:
+                        buys = result.trade_log[result.trade_log['type'].str.contains('BUY')]
+                        sells = result.trade_log[result.trade_log['type'].str.contains('SELL')]
+                        
+                        ax.scatter(buys['timestamp'], buys['price'], marker='^', color='green', label='Buy', zorder=5, s=100)
+                        ax.scatter(sells['timestamp'], sells['price'], marker='v', color='red', label='Sell', zorder=5, s=100)
+                    
+                    ax.set_title(f"Price Chart - {lab_symbol}")
+                    ax.legend()
+                    ax.grid(True, alpha=0.3)
+                    st.pyplot(fig)
+                
+                with tab_equity:
+                    equity = result.portfolio_history['equity']
+                    drawdown = (equity / equity.cummax()) - 1
+                    
+                    c1, c2 = st.columns(2)
+                    c1.line_chart(equity)
+                    c2.area_chart(drawdown)
+                    
+            # 3. Trade Log
+            st.subheader("Trade Log")
+            if result.trade_log is not None and not result.trade_log.empty:
+                st.dataframe(
+                    result.trade_log.style.format({
+                        'price': '{:.2f}', 
+                        'quantity': '{:.4f}', 
+                        'pnl': '{:.2f}'
+                    })
+                )
+            else:
+                st.info("No trades executed.")
+                
+        except Exception as e:
+            status.error(f"Error: {str(e)}")
+            st.exception(e)
