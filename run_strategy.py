@@ -22,6 +22,17 @@ from research.experiments.optuna_ma_optimization import optimize_ma_strategy_for
 from trading_backtester.backtester import Backtester
 from trading_backtester.portfolio_backtester import PortfolioBacktester
 
+# Strategy Lab Imports
+from strategy_lab.config import StrategyConfig, RiskConfig, RiskConstraintConfig, ParameterBound
+from strategy_lab.strategies.rule_based import MultiSignalRuleStrategy
+from strategy_lab.backtest.engine import StrategyBacktestEngine
+from strategy_lab.risk.engine import RiskEngine
+from strategy_lab.data.providers import YFinanceHistoricalProvider
+from strategy_lab.factors.base import FactorRegistry
+# Ensure factors are registered
+import strategy_lab.factors.technical 
+import strategy_lab.factors.fundamental
+
 
 logger = logging.getLogger(__name__)
 
@@ -88,6 +99,12 @@ def parse_args(strategy_config: Dict[str, Any]) -> argparse.Namespace:
         "--allow-interactive",
         action="store_true",
         help="Allow interactive prompts even when stdin is not a TTY",
+    )
+    parser.add_argument(
+        "--mode",
+        choices=["legacy", "lab"],
+        default="legacy",
+        help="Run mode: 'legacy' for old strategies, 'lab' for new Strategy Lab",
     )
 
     defaults = _default_windows(strategy_config, strategy_config.get("default_strategy"))
@@ -162,7 +179,10 @@ def run_backtest(
     use_local_repository: bool = True,
     fundamentals: Dict[str, Any] | None = None,
     strategy_name: str | None = None,
+
     strategy_params: Dict[str, Any] | None = None,
+    start_date: pd.Timestamp | None = None,
+    end_date: pd.Timestamp | None = None,
 ):
     """
     Core function that runs the full backtest and returns a results dict.
@@ -182,6 +202,21 @@ def run_backtest(
     if df is None or df.empty:
         print("Error: No data available for the selected source. Check your repository, symbol, or API key.")
         sys.exit(1)
+
+    # 1b. Slice by date if requested
+    if start_date and end_date:
+        mask = (df.index >= start_date) & (df.index <= end_date)
+        df = df.loc[mask]
+        
+    if df.empty:
+        print(f"Error: No data available between {start_date} and {end_date}.")
+        # We should probably raise or return empty instead of sys.exit(1) for Streamlit safety, 
+        # but sticking to existing pattern for now (CLI exit). 
+        # Ideally return error dict.
+        # Let's return a special dict to let caller handle it if possible, but existing code exits.
+        # For Streamlit, we catch exceptions.
+        # Let's raise ValueError.
+        raise ValueError(f"No data available between {start_date} and {end_date}.")
 
     source_name = PriceDataSource.LOCAL_REPOSITORY.value if use_local_repository else source.value
 
@@ -318,6 +353,74 @@ def _run_optuna_mode() -> None:
         logger.info("  %s: %s", param, value)
 
 
+def _run_strategy_lab_cli(symbol: str) -> None:
+    """Run a Strategy Lab backtest from the CLI."""
+    logger.info("=== Strategy Lab CLI ===")
+    logger.info("Symbol: %s", symbol)
+    
+    # 1. Configuration
+    # For CLI, we use defaults or simple hardcoded values for now, 
+    # mirroring the basic "MultiSignalRuleStrategy" setup from UI
+    risk_cfg = RiskConfig(
+        max_drawdown_pct=0.20,
+        risk_per_trade=0.01,
+        stop_loss_atr_multiple=1.5
+    )
+    
+    strat_cfg = StrategyConfig(
+        name="LabCLIStrategy",
+        initial_capital=100_000.0,
+        risk_config=risk_cfg,
+        parameters={
+            "factors": ["sma_cross", "rsi_oversold", "macd_cross"], # Default set
+            "weights": {"sma_cross": 1.0, "rsi_oversold": 1.0, "macd_cross": 1.0},
+            "threshold": 0.5
+        }
+    )
+    
+    # 2. Setup Components
+    provider = YFinanceHistoricalProvider(force_refresh=False)
+    risk_engine = RiskEngine(risk_config=risk_cfg)
+    engine = StrategyBacktestEngine(
+        data_provider=provider,
+        risk_engine=risk_engine,
+        factor_registry=FactorRegistry
+    )
+    
+    # 3. Create Strategy
+    strategy = MultiSignalRuleStrategy(strat_cfg)
+    
+    # 4. Run
+    # Defaulting to 1 year backtest for CLI demo
+    end_date = pd.Timestamp.now()
+    start_date = end_date - pd.DateOffset(years=1)
+    
+    logger.info("Running backtest from %s to %s...", start_date.date(), end_date.date())
+    
+    try:
+        result = engine.run(
+            strategy=strategy,
+            start_date=start_date,
+            end_date=end_date,
+            universe=[symbol],
+            initial_capital=100_000.0
+        )
+        
+        # 5. Report
+        metrics = result.get_metrics()
+        logger.info("\n=== Backtest Complete ===")
+        logger.info("Total Return: %.2f%%", metrics['total_return'] * 100)
+        logger.info("Sharpe Ratio: %.2f", metrics['sharpe_ratio'])
+        logger.info("Max Drawdown: %.2f%%", metrics['max_drawdown'] * 100)
+        
+        if result.portfolio_history is not None and not result.portfolio_history.empty:
+            final_equity = result.portfolio_history['equity'].iloc[-1]
+            logger.info("Final Equity: $%.2f", final_equity)
+            
+    except Exception as exc:
+        logger.error("Strategy Lab backtest failed: %s", exc)
+
+
 def main():
     """
     Simple console-based UI that asks the user for inputs.
@@ -328,6 +431,34 @@ def main():
     logger.info("=== Trading System Runner ===")
 
     interactive_allowed = sys.stdin.isatty()
+    
+    # Check if mode is provided via args first to bypass interactive for LAB
+    # But we need basic args parsing first.
+    # To avoid logic duplication, we'll parse args early.
+    try:
+        # We need to load config just to satisfy parse_args signature, 
+        # though it's not strictly needed for LAB mode.
+        strategy_config = load_strategy_config() 
+    except Exception:
+        # If config is missing, we might still want to run Lab mode?
+        # For now, let's assume config is required or mock it.
+        strategy_config = {}
+
+    args = parse_args(strategy_config)
+    
+    if args.mode == "lab":
+         # CLI execution for Lab
+        raw_symbols = args.symbol
+        if not raw_symbols:
+            logger.error("Symbol is required for Strategy Lab mode (e.g. --symbol AAPL)")
+            return
+        
+        symbols = [s.strip().upper() for s in raw_symbols.split(",") if s.strip()]
+        for sym in symbols:
+            _run_strategy_lab_cli(sym)
+        return
+
+    # Legacy / Interactive Selection logic
     use_local_repository, selected_data_source = _choose_data_source(interactive_allowed)
 
     mode_choice = _choose_mode(interactive_allowed)

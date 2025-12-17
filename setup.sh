@@ -78,7 +78,7 @@ echo ""
 
 # Verify installation
 echo "Verifying installation..."
-if python -c "import pandas, numpy, yfinance, ta, optuna, streamlit, backtesting" 2>/dev/null; then
+if python -c "import pandas, numpy, yfinance, ta, optuna, streamlit, backtesting, strategy_lab" 2>/dev/null; then
     echo "✅ All core dependencies verified"
 else
     echo "❌ Some dependencies failed to import"
@@ -104,6 +104,7 @@ echo "     python run_strategy.py"
 echo ""
 echo "  4. Or launch the Streamlit UI:"
 echo "     streamlit run ui_streamlit.py"
+echo "     (Access at http://localhost:8501)"
 echo ""
 echo "For more information, see README.md"
 echo ""
