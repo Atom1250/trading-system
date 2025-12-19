@@ -1,6 +1,7 @@
 repos:
   - repo: https://github.com/charliermarsh/ruff-pre-commit
-    rev: v0.18.0
+    # Use the main branch for pre-commit to avoid pinning to a tag that may not exist
+    rev: main
     hooks:
       - id: ruff
         args: ["--fix"]
