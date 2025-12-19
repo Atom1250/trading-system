@@ -20,3 +20,33 @@ extend-ignore = [
 "ui_streamlit.py" = ["D100", "D200", "D205", "D212", "D413"]
 # Allow larger function complexity in validation utils while we refactor them incrementally
 "utils/data_validation.py" = ["C901", "PLR0912", "PLR0915"]
+
+[project]
+name = "trading-system"
+version = "0.0.0"
+description = "Internal trading system for research and backtesting"
+readme = "README.md"
+requires-python = ">=3.10"
+authors = [
+  { name = "Trading System Maintainers" },
+]
+dependencies = []
+
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = [
+  "backend*",
+  "strategy*",
+  "strategy_lab*",
+  "ingestion*",
+  "services*",
+  "utils*",
+  "research*",
+  "repository*",
+  "backtesting*",
+  "trading_backtester*",
+]
