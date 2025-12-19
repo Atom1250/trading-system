@@ -18,7 +18,6 @@ from research.experiments.stratestic_adapter import dataframe_to_stratestic_time
 
 if TYPE_CHECKING:  # pragma: no cover - typing-only import
     from stratestic.data import PriceSeries
-    from stratestic.strategy import Strategy
 
 
 @lru_cache(maxsize=1)
@@ -47,9 +46,11 @@ def _moving_average_crossover_strategy_class():
             if self.short_window >= self.long_window:
                 raise ValueError("short_window must be less than long_window")
 
-            super().__init__(name=f"MA Crossover {self.short_window}/{self.long_window}")
+            super().__init__(
+                name=f"MA Crossover {self.short_window}/{self.long_window}",
+            )
 
-        def generate_signals(self, prices: "PriceSeries") -> pd.DataFrame:
+        def generate_signals(self, prices: PriceSeries) -> pd.DataFrame:
             """Generate signals for a given ``PriceSeries``.
 
             Parameters
@@ -63,11 +64,15 @@ def _moving_average_crossover_strategy_class():
             pandas.DataFrame
                 DataFrame containing the short/long moving averages alongside the
                 position signal (1 for long, 0 for flat).
-            """
 
+            """
             closes = prices.close
-            short_ma = closes.rolling(window=self.short_window, min_periods=self.short_window).mean()
-            long_ma = closes.rolling(window=self.long_window, min_periods=self.long_window).mean()
+            short_ma = closes.rolling(
+                window=self.short_window, min_periods=self.short_window,
+            ).mean()
+            long_ma = closes.rolling(
+                window=self.long_window, min_periods=self.long_window,
+            ).mean()
 
             cross_up = (short_ma > long_ma) & (short_ma.shift(1) <= long_ma.shift(1))
             cross_down = (short_ma < long_ma) & (short_ma.shift(1) >= long_ma.shift(1))
@@ -82,12 +87,11 @@ def _moving_average_crossover_strategy_class():
                     "short_ma": short_ma,
                     "long_ma": long_ma,
                     "signal": signal,
-                }
+                },
             )
 
-        def run(self, prices: "PriceSeries") -> pd.DataFrame:
+        def run(self, prices: PriceSeries) -> pd.DataFrame:
             """Run the strategy on the provided ``PriceSeries`` and return signals."""
-
             return self.generate_signals(prices)
 
     return MovingAverageCrossoverStrategy
@@ -95,7 +99,6 @@ def _moving_average_crossover_strategy_class():
 
 def build_ma_crossover_strategy(short_window: int, long_window: int):
     """Return an instance of the Stratestic MA crossover strategy configured with the given parameters."""
-
     strategy_cls = _moving_average_crossover_strategy_class()
     return strategy_cls(short_window=short_window, long_window=long_window)
 

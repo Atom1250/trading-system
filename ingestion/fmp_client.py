@@ -22,7 +22,7 @@ from __future__ import annotations
 
 import logging
 import os
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 import pandas as pd
 import requests
@@ -31,8 +31,7 @@ logger = logging.getLogger(__name__)
 
 
 class FMPClient:
-    """
-    Thin wrapper around FMP stable API endpoints for historical prices.
+    """Thin wrapper around FMP stable API endpoints for historical prices.
     """
 
     def __init__(
@@ -42,8 +41,7 @@ class FMPClient:
         session: Optional[requests.Session] = None,
         timeout: int = 30,
     ) -> None:
-        """
-        Initialize the FMPClient.
+        """Initialize the FMPClient.
 
         Args:
             api_key: FMP API key. If not provided, will use FMP_API_KEY env var.
@@ -51,6 +49,7 @@ class FMPClient:
                       or default to "https://financialmodelingprep.com/stable".
             session: Optional shared requests.Session for connection pooling.
             timeout: Request timeout in seconds.
+
         """
         self.api_key = api_key or os.getenv("FMP_API_KEY")
         if not self.api_key:
@@ -64,12 +63,14 @@ class FMPClient:
                 "     export FMP_API_KEY=your_key_here\n\n"
                 "Alternatively, use Yahoo Finance (no API key required):\n"
                 "  - Set TS_PRICE_DATA_SOURCE=yahoo_finance in your .env file\n"
-                "  - Or select Yahoo Finance when prompted in the console"
+                "  - Or select Yahoo Finance when prompted in the console",
             )
 
-        self.base_url = (base_url or os.getenv("FMP_BASE_URL", "https://financialmodelingprep.com/stable")).rstrip(
-            "/"
-        )
+        # Ensure we have a concrete string before calling rstrip to satisfy type checkers
+        self.base_url = str(
+            base_url
+            or os.getenv("FMP_BASE_URL", "https://financialmodelingprep.com/stable"),
+        ).rstrip("/")
         self.session = session or requests.Session()
         self.timeout = timeout
 
@@ -78,9 +79,8 @@ class FMPClient:
     # ---------------------------------------------------------------------
     # Low-level request helper
     # ---------------------------------------------------------------------
-    def _get(self, endpoint: str, params: Optional[Dict[str, Any]] = None) -> Any:
-        """
-        Internal GET wrapper handling base URL, API key, and error handling.
+    def _get(self, endpoint: str, params: Optional[dict[str, Any]] = None) -> Any:
+        """Internal GET wrapper handling base URL, API key, and error handling.
 
         Args:
             endpoint: Path starting with "/" (e.g. "/historical-price-eod/full").
@@ -91,6 +91,7 @@ class FMPClient:
 
         Raises:
             RuntimeError: For non-200 responses or API error payloads.
+
         """
         if not endpoint.startswith("/"):
             endpoint = "/" + endpoint
@@ -133,8 +134,7 @@ class FMPClient:
         start_date: Optional[str] = None,
         end_date: Optional[str] = None,
     ) -> pd.DataFrame:
-        """
-        Fetch full historical end-of-day prices for a single symbol.
+        """Fetch full historical end-of-day prices for a single symbol.
 
         This uses the stable FMP endpoint:
             /historical-price-eod/full?symbol={SYMBOL}&from=YYYY-MM-DD&to=YYYY-MM-DD
@@ -148,8 +148,9 @@ class FMPClient:
             DataFrame with columns typically including:
                 date, open, high, low, close, adjClose, volume, etc.
             Indexed by datetime (date).
+
         """
-        params: Dict[str, Any] = {"symbol": symbol.upper()}
+        params: dict[str, Any] = {"symbol": symbol.upper()}
         if start_date:
             params["from"] = start_date
         if end_date:
@@ -158,7 +159,7 @@ class FMPClient:
         raw = self._get("/historical-price-eod/full", params=params)
 
         if isinstance(raw, dict) and "historical" in raw:
-            records: List[Dict[str, Any]] = raw["historical"]
+            records: list[dict[str, Any]] = raw["historical"]
         elif isinstance(raw, list):
             records = raw
         else:
@@ -184,8 +185,7 @@ class FMPClient:
         interval: str = "1min",
         limit: Optional[int] = None,
     ) -> pd.DataFrame:
-        """
-        Fetch intraday historical data for a symbol.
+        """Fetch intraday historical data for a symbol.
 
         This uses the stable intraday endpoint (pattern; adjust to actual doc
         if you extend intraday support in the app):
@@ -200,9 +200,10 @@ class FMPClient:
         Returns:
             DataFrame indexed by datetime. Currently unused in the app and safe
             to ignore if you have not implemented intraday analytics.
+
         """
         endpoint = f"/historical-chart/{interval}"
-        params: Dict[str, Any] = {"symbol": symbol.upper()}
+        params: dict[str, Any] = {"symbol": symbol.upper()}
         if limit is not None:
             params["limit"] = limit
 
@@ -236,16 +237,16 @@ class FMPClient:
         start_date: Optional[str] = None,
         end_date: Optional[str] = None,
     ) -> pd.DataFrame:
-        """
-        Fetch historical daily OHLCV data for ``symbol`` using the stable EOD endpoint.
+        """Fetch historical daily OHLCV data for ``symbol`` using the stable EOD endpoint.
 
         The ``limit`` parameter is retained for backward compatibility but is applied
         by trimming the returned DataFrame rather than altering the API request.
         """
-
         df = self.get_historical_eod(symbol, start_date=start_date, end_date=end_date)
         if df.empty:
-            return pd.DataFrame(columns=["open", "high", "low", "close", "adj_close", "volume"])
+            return pd.DataFrame(
+                columns=["open", "high", "low", "close", "adj_close", "volume"],
+            )
 
         column_mapping = {"adjClose": "adj_close", "adj_close": "adj_close"}
         normalized = df.rename(columns=column_mapping)

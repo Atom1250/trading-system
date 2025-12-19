@@ -2,24 +2,24 @@ from __future__ import annotations
 
 import datetime
 import logging
+import sqlite3
 from pathlib import Path
-from typing import Any
+from typing import Any, Optional
 
 import pandas as pd
 from dateutil import parser
 
-import sqlite3
 from config import settings
 from config.settings import (
     DEFAULT_PRICE_DATA_SOURCE,
-    PRICE_DATA_DIR,
     KAGGLE_DB_PATH,
+    PRICE_DATA_DIR,
     PriceDataSource,
     ensure_data_directories,
 )
 from ingestion.fmp_client import FMPClient
 from ingestion.yahoo_finance_client import YahooFinanceClient
-from utils.data_validation import validate_price_data, clean_price_data
+from utils.data_validation import clean_price_data, validate_price_data
 
 logger = logging.getLogger(__name__)
 
@@ -39,19 +39,23 @@ def _normalize_index(df: pd.DataFrame) -> pd.DataFrame:
         df.index = df.index.map(
             lambda value: value
             if isinstance(value, datetime.datetime)
-            else parser.parse(str(value))
+            else parser.parse(str(value)),
         )
 
     if getattr(df.index, "tz", None) is not None:
-        df.index = df.index.tz_localize(None)
+        try:
+            # If index is timezone-aware, prefer tz_convert to remove tz information.
+            df.index = df.index.tz_convert(None)
+        except Exception:
+            # Fallback for older pandas versions or unexpected index types
+            df.index = df.index.tz_localize(None)
 
     df.sort_index(inplace=True)
     return df
 
 
 def load_local_prices(symbol: str) -> pd.DataFrame:
-    """
-    Load local price history for a symbol from CSV, if it exists.
+    """Load local price history for a symbol from CSV, if it exists.
     Return an empty DataFrame if the file is missing.
     """
     ensure_data_directories()
@@ -73,22 +77,26 @@ def load_local_prices(symbol: str) -> pd.DataFrame:
 
 
 def load_kaggle_prices(symbol: str) -> pd.DataFrame:
-    """
-    Load historical prices for a symbol from the Kaggle SQLite database.
+    """Load historical prices for a symbol from the Kaggle SQLite database.
     """
     if not KAGGLE_DB_PATH.exists():
-        logger.warning("Kaggle DB not found at %s. Run scripts/build_kaggle_price_db.py first.", KAGGLE_DB_PATH)
+        logger.warning(
+            "Kaggle DB not found at %s. Run scripts/build_kaggle_price_db.py first.",
+            KAGGLE_DB_PATH,
+        )
         return pd.DataFrame()
 
     try:
         with sqlite3.connect(KAGGLE_DB_PATH) as conn:
             query = "SELECT date, open, high, low, close, volume FROM prices WHERE symbol = ?"
-            df = pd.read_sql_query(query, conn, params=(symbol,), parse_dates=["date"], index_col="date")
-            
+            df = pd.read_sql_query(
+                query, conn, params=(symbol,), parse_dates=["date"], index_col="date",
+            )
+
         if df.empty:
             logger.info("No Kaggle data found for %s", symbol)
             return pd.DataFrame()
-            
+
         return _normalize_index(df)
     except Exception as exc:
         logger.error("Failed to load Kaggle prices for %s: %s", symbol, exc)
@@ -96,8 +104,7 @@ def load_kaggle_prices(symbol: str) -> pd.DataFrame:
 
 
 def save_local_prices(symbol: str, df: pd.DataFrame) -> None:
-    """
-    Save the given price DataFrame to the local repository as CSV.
+    """Save the given price DataFrame to the local repository as CSV.
     Overwrite existing file.
     """
     ensure_data_directories()
@@ -109,8 +116,7 @@ def save_local_prices(symbol: str, df: pd.DataFrame) -> None:
 
 
 def append_new_rows(symbol: str, new_data: pd.DataFrame) -> None:
-    """
-    Append new rows to an existing local CSV, avoiding duplicate dates.
+    """Append new rows to an existing local CSV, avoiding duplicate dates.
     """
     if new_data.empty:
         logger.info("No new price data to append for %s", symbol)
@@ -129,18 +135,19 @@ def append_new_rows(symbol: str, new_data: pd.DataFrame) -> None:
     save_local_prices(symbol, combined)
 
 
-def _source_to_value(data_source: PriceDataSource | Any | None) -> str:
+def _source_to_value(data_source: Optional[Any]) -> str:
     source = data_source or DEFAULT_PRICE_DATA_SOURCE
     return getattr(source, "value", str(source)).lower()
 
 
-def _resolve_source_for_symbol(symbol: str, preferred_source: PriceDataSource | Any | None) -> str:
+def _resolve_source_for_symbol(
+    symbol: str, preferred_source: Optional[Any],
+) -> str:
     """Return a usable source name, falling back when configuration is missing.
 
     If FMP is requested but the API key is absent, automatically fall back to
     Yahoo Finance so backtests can still run without manual reconfiguration.
     """
-
     source_value = _source_to_value(preferred_source)
 
     if source_value == PriceDataSource.FMP.value and not settings.FMP_API_KEY:
@@ -153,18 +160,26 @@ def _resolve_source_for_symbol(symbol: str, preferred_source: PriceDataSource | 
     return source_value
 
 
-def _fetch_with_fallback(symbol: str, primary_source: str, fallback_source: str | None) -> pd.DataFrame:
+def _fetch_with_fallback(
+    symbol: str, primary_source: str, fallback_source: Optional[str],
+) -> pd.DataFrame:
     """Fetch prices from ``primary_source`` and optionally fall back if empty/errors."""
 
     def _attempt(source_value: str) -> pd.DataFrame:
         try:
             return _fetch_prices_from_source(symbol, source_value)
         except Exception as exc:  # noqa: BLE001 - log and allow fallback
-            logger.error("Fetching %s prices from %s failed: %s", symbol, source_value, exc)
+            logger.error(
+                "Fetching %s prices from %s failed: %s", symbol, source_value, exc,
+            )
             return pd.DataFrame()
 
     df = _attempt(primary_source)
-    if (df is None or df.empty) and fallback_source and fallback_source != primary_source:
+    if (
+        (df is None or df.empty)
+        and fallback_source
+        and fallback_source != primary_source
+    ):
         logger.info(
             "Primary source %s returned no data for %s; trying fallback %s",
             primary_source,
@@ -191,7 +206,7 @@ def _fetch_prices_from_source(symbol: str, source_value: str) -> pd.DataFrame:
         df = load_kaggle_prices(symbol)
     else:
         raise ValueError(f"Unsupported data source: {source_value}")
-    
+
     # Validate and clean the data
     if not df.empty:
         is_valid, warnings = validate_price_data(df, symbol)
@@ -202,16 +217,15 @@ def _fetch_prices_from_source(symbol: str, source_value: str) -> pd.DataFrame:
             is_valid, warnings = validate_price_data(df, symbol)
             if not is_valid:
                 logger.error("Data still invalid after cleaning for %s", symbol)
-    
+
     return df
 
 
 def fetch_and_cache_prices(
     symbol: str,
-    data_source: PriceDataSource | None = None,
+    data_source: Optional[PriceDataSource] = None,
 ) -> pd.DataFrame:
-    """
-    Fetch full historical prices for `symbol` from the chosen data source
+    """Fetch full historical prices for `symbol` from the chosen data source
     (Yahoo Finance or FMP), then save to the local repository.
     Returns the full DataFrame.
     """
@@ -229,10 +243,9 @@ def fetch_and_cache_prices(
 def get_prices_for_backtest(
     symbol: str,
     use_local_repository: bool,
-    data_source: PriceDataSource | None = None,
+    data_source: Optional[PriceDataSource] = None,
 ) -> pd.DataFrame:
-    """
-    High-level entrypoint used by the strategy/backtest layer.
+    """High-level entrypoint used by the strategy/backtest layer.
     If use_local_repository is True:
         - Try to load local prices.
         - If file does not exist or is empty, fetch_and_cache_prices and then return.
@@ -240,7 +253,6 @@ def get_prices_for_backtest(
         - Use the given data_source (or DEFAULT_PRICE_DATA_SOURCE if None) to fetch data,
           but do not necessarily save it.
     """
-
     if use_local_repository:
         local_df = load_local_prices(symbol)
         if not local_df.empty:
@@ -268,5 +280,7 @@ def get_prices_for_backtest(
     if source_value != PriceDataSource.YAHOO_FINANCE.value:
         fallback_value = PriceDataSource.YAHOO_FINANCE.value
 
-    logger.info("Fetching %s prices from %s for backtest (no cache).", symbol, source_value)
+    logger.info(
+        "Fetching %s prices from %s for backtest (no cache).", symbol, source_value,
+    )
     return _fetch_with_fallback(symbol, source_value, fallback_value)

@@ -1,16 +1,16 @@
 """Technical indicator calculations for trading strategies."""
+
 from __future__ import annotations
 
 import pandas as pd
 
-
 __all__ = [
-    "sma",
-    "ema",
-    "rsi",
-    "macd",
-    "bollinger_bands",
     "average_true_range",
+    "bollinger_bands",
+    "ema",
+    "macd",
+    "rsi",
+    "sma",
 ]
 
 
@@ -25,6 +25,7 @@ def sma(df: pd.DataFrame, window: int = 14, column: str = "close") -> pd.Series:
     Returns:
         The SMA series, also attached to the provided DataFrame with a
         ``SMA_<window>`` column name.
+
     """
     col_name = f"SMA_{window}"
     df[col_name] = df[column].rolling(window=window, min_periods=window).mean()
@@ -42,6 +43,7 @@ def ema(df: pd.DataFrame, span: int = 14, column: str = "close") -> pd.Series:
     Returns:
         The EMA series, also attached to the provided DataFrame with an
         ``EMA_<span>`` column name.
+
     """
     col_name = f"EMA_{span}"
     df[col_name] = df[column].ewm(span=span, adjust=False).mean()
@@ -59,6 +61,7 @@ def rsi(df: pd.DataFrame, period: int = 14, column: str = "close") -> pd.Series:
     Returns:
         The RSI series, also attached to the provided DataFrame with an
         ``RSI_<period>`` column name.
+
     """
     delta = df[column].diff()
     gain = delta.where(delta > 0, 0.0)
@@ -95,6 +98,7 @@ def macd(
         The MACD histogram series, also attached to the DataFrame as
         ``MACD_hist``. Additional columns ``MACD_line`` and ``MACD_signal``
         are included for reference.
+
     """
     fast_ema = df[column].ewm(span=fast_span, adjust=False).mean()
     slow_ema = df[column].ewm(span=slow_span, adjust=False).mean()
@@ -111,7 +115,7 @@ def macd(
 
 
 def bollinger_bands(
-    df: pd.DataFrame, window: int = 20, num_std: float = 2.0, column: str = "close"
+    df: pd.DataFrame, window: int = 20, num_std: float = 2.0, column: str = "close",
 ) -> pd.DataFrame:
     """Calculate Bollinger Bands on the ``column`` price.
 
@@ -156,6 +160,7 @@ def average_true_range(
     Returns:
         The ATR series, also attached to the provided DataFrame with an
         ``ATR_<window>`` column name.
+
     """
     missing = [
         name
@@ -164,7 +169,7 @@ def average_true_range(
     ]
     if missing:
         raise KeyError(
-            "Missing required columns for ATR calculation: " + ", ".join(missing)
+            "Missing required columns for ATR calculation: " + ", ".join(missing),
         )
 
     high = df[high_column]
