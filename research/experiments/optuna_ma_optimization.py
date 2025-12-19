@@ -4,19 +4,18 @@ from __future__ import annotations
 
 import argparse
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Optional, Tuple
 
-import pandas as pd
 import optuna
+import pandas as pd
 
 from research.experiments.single_asset_stratestic_backtest import (
     run_stratestic_backtest_for_symbol,
 )
 
 
-def _risk_adjusted_score(metrics: Dict[str, Any]) -> float:
+def _risk_adjusted_score(metrics: dict[str, Any]) -> float:
     """Compute a risk-adjusted objective score from backtest metrics."""
-
     sharpe_ratio = metrics.get("sharpe_ratio")
     if sharpe_ratio is not None:
         return float(sharpe_ratio)
@@ -40,10 +39,10 @@ def _objective(
 ):
     def objective(trial: optuna.trial.Trial) -> float:
         short_window = trial.suggest_int(
-            "short_window", short_window_range[0], short_window_range[1]
+            "short_window", short_window_range[0], short_window_range[1],
         )
         long_window = trial.suggest_int(
-            "long_window", long_window_range[0], long_window_range[1]
+            "long_window", long_window_range[0], long_window_range[1],
         )
 
         if short_window >= long_window:
@@ -71,15 +70,13 @@ def optimize_ma_strategy_for_symbol(
     n_trials: int = 50,
     storage: Optional[str] = None,
     study_name: Optional[str] = None,
-    short_window_range: tuple[int, int] | None = None,
-    long_window_range: tuple[int, int] | None = None,
+    short_window_range: Optional[Tuple[int, int]] = None,
+    long_window_range: Optional[Tuple[int, int]] = None,
 ):
-    """
-    Run an Optuna study to optimize the MA crossover parameters for `symbol`.
+    """Run an Optuna study to optimize the MA crossover parameters for `symbol`.
     Optionally use `storage` and `study_name` for persistent tracking.
     Print and return the best parameters and best value.
     """
-
     short_range = short_window_range or (5, 50)
     long_range = long_window_range or (20, 200)
 
@@ -109,9 +106,9 @@ def optimize_ma_strategy_for_symbol(
     rows = []
     for trial in study.trials:
         trial_params = trial.params or {}
-        result: Dict[str, Any] | None = trial.user_attrs.get("result")  # type: ignore[assignment]
+        result: Optional[dict[str, Any]] = trial.user_attrs.get("result")  # type: ignore[assignment]
 
-        row: Dict[str, Any] = {
+        row: dict[str, Any] = {
             "symbol": symbol,
             "short_window": trial_params.get("short_window"),
             "long_window": trial_params.get("long_window"),
@@ -124,7 +121,7 @@ def optimize_ma_strategy_for_symbol(
                     "cumulative_return": result.get("cumulative_return"),
                     "max_drawdown": result.get("max_drawdown"),
                     "sharpe_ratio": result.get("sharpe_ratio"),
-                }
+                },
             )
             metrics = result.get("metrics")
             if isinstance(metrics, dict):

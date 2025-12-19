@@ -1,12 +1,14 @@
 """Moving Average Crossover trading strategy implementation."""
+
 from __future__ import annotations
 
 import logging
+from typing import Optional
+
 import pandas as pd
 
 from indicators.technicals import sma
 from strategy.trade_management import apply_position_management
-
 
 logger = logging.getLogger(__name__)
 
@@ -17,6 +19,7 @@ class MovingAverageCrossoverStrategy:
     Attributes:
         short_window: Window length for the fast SMA.
         long_window: Window length for the slow SMA.
+
     """
 
     def __init__(
@@ -30,12 +33,14 @@ class MovingAverageCrossoverStrategy:
         stop_atr_multiple: float = 1.5,
         take_profit_multiple: float = 2.0,
         max_drawdown_pct: float = 0.2,
-        fundamentals: dict | None = None,
+        fundamentals: Optional[dict] = None,
     ) -> None:
         if short_window <= 0 or long_window <= 0:
             raise ValueError("Window lengths must be positive integers.")
         if short_window >= long_window:
-            raise ValueError("short_window must be smaller than long_window for a crossover strategy.")
+            raise ValueError(
+                "short_window must be smaller than long_window for a crossover strategy.",
+            )
 
         self.short_window = short_window
         self.long_window = long_window
@@ -48,7 +53,10 @@ class MovingAverageCrossoverStrategy:
         self.fundamentals = fundamentals or {}
 
         if self.fundamentals:
-            logger.debug("Loaded fundamentals for strategy: keys=%s", list(self.fundamentals.keys()))
+            logger.debug(
+                "Loaded fundamentals for strategy: keys=%s",
+                list(self.fundamentals.keys()),
+            )
 
     def run(self, df: pd.DataFrame, price_column: str = "close") -> pd.DataFrame:
         """Run the strategy and return the DataFrame with signals.
@@ -59,6 +67,7 @@ class MovingAverageCrossoverStrategy:
 
         Returns:
             The input DataFrame with added SMA and signal columns.
+
         """
         if price_column not in df.columns:
             raise KeyError(f"Column '{price_column}' not found in DataFrame.")

@@ -1,16 +1,18 @@
 """Backtester that routes execution through ``backtesting.py``."""
+
 from __future__ import annotations
 
-from pathlib import Path
-
 import logging
+from pathlib import Path
+from typing import Optional, Union
+
 import matplotlib
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import pandas as pd
-from backtesting import Backtest, Strategy
 
+from backtesting import Backtest, Strategy
 
 logger = logging.getLogger(__name__)
 
@@ -41,6 +43,7 @@ class Backtester:
         Returns:
             Dict containing the full results DataFrame, cumulative return,
             maximum drawdown, and the export path.
+
         """
         self._validate_inputs(df)
 
@@ -51,7 +54,9 @@ class Backtester:
             def init(self) -> None:
                 self.signal = self.I(lambda: signal_values, name="signal")
 
-            def next(self) -> None:  # pragma: no cover - thin wrapper for backtesting.py
+            def next(
+                self,
+            ) -> None:  # pragma: no cover - thin wrapper for backtesting.py
                 sig = self.signal[-1]
 
                 if sig > 0:
@@ -64,9 +69,8 @@ class Backtester:
                         if self.position:
                             self.position.close()
                         self.sell(size=1)
-                else:
-                    if self.position:
-                        self.position.close()
+                elif self.position:
+                    self.position.close()
 
         bt = Backtest(
             bt_df,
@@ -80,12 +84,14 @@ class Backtester:
         stats = bt.run()
         equity_curve = stats["_equity_curve"].copy()
 
-        trimmed_curve = equity_curve.iloc[-len(df):]
-        trimmed_curve.index = df.index[-len(trimmed_curve):]
+        trimmed_curve = equity_curve.iloc[-len(df) :]
+        trimmed_curve.index = df.index[-len(trimmed_curve) :]
 
         results = df.copy()
         results["equity"] = trimmed_curve["Equity"].values
-        results["strategy_returns"] = trimmed_curve["Equity"].pct_change().fillna(0).values
+        results["strategy_returns"] = (
+            trimmed_curve["Equity"].pct_change().fillna(0).values
+        )
         results["cumulative_returns"] = (
             trimmed_curve["Equity"].div(trimmed_curve["Equity"].iloc[0]).sub(1).values
         )
@@ -115,16 +121,19 @@ class Backtester:
         self,
         df: pd.DataFrame,
         symbol: str,
-        output_path: str | Path | None = None,
+        output_path: Optional[Union[str, Path]] = None,
     ) -> str:
         """Plot price, moving averages, and buy/sell signals over time.
 
         Saves the plot under ``reports/`` by default and returns the saved path.
         """
-
         self._validate_inputs(df)
 
-        output = Path(output_path) if output_path is not None else Path("reports") / f"{symbol}_backtest.png"
+        output = (
+            Path(output_path)
+            if output_path is not None
+            else Path("reports") / f"{symbol}_backtest.png"
+        )
         output.parent.mkdir(parents=True, exist_ok=True)
 
         fig, ax = plt.subplots(figsize=(12, 6))
@@ -183,7 +192,6 @@ class Backtester:
 
     def _prepare_backtesting_frame(self, df: pd.DataFrame) -> pd.DataFrame:
         """Prepare OHLCV data for consumption by ``backtesting.py``."""
-
         bt_df = pd.DataFrame(
             {
                 "Open": df["open"],

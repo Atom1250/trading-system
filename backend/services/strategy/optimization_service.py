@@ -1,9 +1,14 @@
 """Optimization service using Optuna."""
-from typing import Any, Dict, List, Optional, Union
+
+import logging
+from typing import Any
+
 import optuna
-import pandas as pd
+
 from services.strategy.backtest_service import BacktestService
-from services.strategy.registry import registry
+
+logger = logging.getLogger(__name__)
+
 
 class OptimizationService:
     """Service for optimizing strategy parameters using Optuna."""
@@ -15,15 +20,14 @@ class OptimizationService:
         self,
         strategy_name: str,
         symbol: str,
-        parameter_ranges: Dict[str, Dict[str, Any]],
+        parameter_ranges: dict[str, dict[str, Any]],
         initial_capital: float = 100000.0,
         data_source: str = "local",
         n_trials: int = 20,
         metric: str = "sharpe_ratio",
-        direction: str = "maximize"
-    ) -> Dict[str, Any]:
-        """
-        Run an Optuna study to optimize strategy parameters.
+        direction: str = "maximize",
+    ) -> dict[str, Any]:
+        """Run an Optuna study to optimize strategy parameters.
 
         Args:
             strategy_name: Name of the strategy to optimize.
@@ -42,10 +46,10 @@ class OptimizationService:
 
         Returns:
             Dictionary containing best parameters, best value, and trial history.
+
         """
-        
         # Get price data once to avoid fetching it in every trial
-        # We can pass this to the backtest service if we modify it, 
+        # We can pass this to the backtest service if we modify it,
         # or rely on caching in the price service (which is already implemented).
         # For now, we'll rely on the cache.
 
@@ -54,26 +58,25 @@ class OptimizationService:
             params = {}
             for name, config in parameter_ranges.items():
                 param_type = config.get("type")
-                
+
                 if param_type == "int":
                     params[name] = trial.suggest_int(
-                        name, 
-                        int(config["min"]), 
-                        int(config["max"]), 
-                        step=int(config.get("step", 1))
+                        name,
+                        int(config["min"]),
+                        int(config["max"]),
+                        step=int(config.get("step", 1)),
                     )
                 elif param_type == "float":
                     params[name] = trial.suggest_float(
-                        name, 
-                        float(config["min"]), 
-                        float(config["max"]), 
-                        step=float(config.get("step", 0.1)) if "step" in config else None
+                        name,
+                        float(config["min"]),
+                        float(config["max"]),
+                        step=float(config.get("step", 0.1))
+                        if "step" in config
+                        else None,
                     )
                 elif param_type == "categorical":
-                    params[name] = trial.suggest_categorical(
-                        name, 
-                        config["choices"]
-                    )
+                    params[name] = trial.suggest_categorical(name, config["choices"])
 
             try:
                 # Run backtest
@@ -82,32 +85,42 @@ class OptimizationService:
                     strategy_name=strategy_name,
                     parameters=params,
                     initial_capital=initial_capital,
-                    data_source=data_source
+                    data_source=data_source,
                 )
-                
+
                 metrics = result.get("metrics", {})
                 value = metrics.get(metric)
-                
+
                 # Handle None or invalid values
                 if value is None:
                     return float("-inf") if direction == "maximize" else float("inf")
-                
+
                 return float(value)
-                
+
             except Exception as e:
                 # Log error and return bad value
-                print(f"Trial failed: {e}")
+                logger.exception(
+                    "Trial failed for strategy=%s symbol=%s params=%s: %s",
+                    strategy_name,
+                    symbol,
+                    params,
+                    e,
+                )
                 return float("-inf") if direction == "maximize" else float("inf")
 
         study = optuna.create_study(direction=direction)
         study.optimize(objective, n_trials=n_trials)
 
         def safe_value(val):
-            if val is None: return None
+            if val is None:
+                return None
             if isinstance(val, float):
-                if val == float('inf'): return "inf"
-                if val == float('-inf'): return "-inf"
-                if val != val: return "nan"  # NaN check
+                if val == float("inf"):
+                    return "inf"
+                if val == float("-inf"):
+                    return "-inf"
+                if val != val:  # NaN check
+                    return "nan"
             return val
 
         return {
@@ -118,10 +131,11 @@ class OptimizationService:
                     "number": t.number,
                     "params": t.params,
                     "value": safe_value(t.value),
-                    "state": t.state.name
+                    "state": t.state.name,
                 }
                 for t in study.trials
-            ]
+            ],
         }
+
 
 optimization_service = OptimizationService()

@@ -1,4 +1,5 @@
 """Trade management helpers for P&L tracking and risk controls."""
+
 from __future__ import annotations
 
 import pandas as pd
@@ -53,21 +54,31 @@ def apply_position_management(
     working["position_size_units"] = (risk_capital / stop_distance).fillna(0)
     working.loc[stop_distance <= 0, "position_size_units"] = 0
 
-    working["position_size_units_signed"] = (
-        working["position_size_units"] * working["signal"].fillna(0)
+    working["position_size_units_signed"] = working["position_size_units"] * working[
+        "signal"
+    ].fillna(0)
+    working["notional_exposure"] = (
+        working["position_size_units_signed"] * working[price_column]
     )
-    working["notional_exposure"] = working["position_size_units_signed"] * working[price_column]
 
     direction = working["signal"].fillna(0)
     stop_offset = stop_atr_multiple * working["atr"]
     tp_offset = take_profit_multiple * stop_offset
 
-    working["stop_loss_price"] = working[price_column] - stop_offset.where(direction >= 0, -stop_offset)
-    working["take_profit_price"] = working[price_column] + tp_offset.where(direction >= 0, -tp_offset)
+    working["stop_loss_price"] = working[price_column] - stop_offset.where(
+        direction >= 0, -stop_offset,
+    )
+    working["take_profit_price"] = working[price_column] + tp_offset.where(
+        direction >= 0, -tp_offset,
+    )
 
     peak_equity = working["equity"].cummax()
-    working["drawdown_pct"] = (working["equity"] - peak_equity) / peak_equity.replace(0, pd.NA)
+    working["drawdown_pct"] = (working["equity"] - peak_equity) / peak_equity.replace(
+        0, pd.NA,
+    )
     working["halt_trading"] = working["drawdown_pct"] <= -max_drawdown_pct
-    working["risk_adjusted_signal"] = working["signal"].where(~working["halt_trading"], 0)
+    working["risk_adjusted_signal"] = working["signal"].where(
+        ~working["halt_trading"], 0,
+    )
 
     return working

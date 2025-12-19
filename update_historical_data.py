@@ -1,12 +1,10 @@
-import datetime
 import logging
 from pathlib import Path
-from typing import List
 
 from config.settings import (
     DEFAULT_PRICE_DATA_SOURCE,
-    PriceDataSource,
     UNIVERSE_DIR,
+    PriceDataSource,
     ensure_data_directories,
 )
 from repository.prices_repository import (
@@ -19,9 +17,8 @@ from repository.prices_repository import (
 logger = logging.getLogger(__name__)
 
 
-def load_universe(path: Path) -> List[str]:
-    """
-    Read a simple text file with one symbol per line and return a list of symbols.
+def load_universe(path: Path) -> list[str]:
+    """Read a simple text file with one symbol per line and return a list of symbols.
     Ignore blank lines and comments starting with '#'.
     """
     symbols: list[str] = []
@@ -39,14 +36,17 @@ def load_universe(path: Path) -> List[str]:
 
 
 def update_symbol_daily(symbol: str, data_source: PriceDataSource) -> None:
-    """
-    Load existing local prices, fetch updates from the external source, and append new rows.
+    """Load existing local prices, fetch updates from the external source, and append new rows.
     If no local file exists, fetch full history.
     """
     existing = load_local_prices(symbol)
 
     if existing.empty:
-        logger.info("No local data for %s. Fetching full history from %s.", symbol, data_source.value)
+        logger.info(
+            "No local data for %s. Fetching full history from %s.",
+            symbol,
+            data_source.value,
+        )
         fresh = fetch_and_cache_prices(symbol, data_source=data_source)
         logger.info("Fetched %s rows for %s.", len(fresh), symbol)
         return
@@ -74,10 +74,11 @@ def update_symbol_daily(symbol: str, data_source: PriceDataSource) -> None:
 
 
 def main() -> None:
+    """Load universe and update historical prices using the configured data source (defaults to FMP).
     """
-    Load universe and update historical prices using the configured data source (defaults to FMP).
-    """
-    logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
+    logging.basicConfig(
+        level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s",
+    )
     ensure_data_directories()
 
     universe_path = UNIVERSE_DIR / "universe_equities.txt"
@@ -87,7 +88,11 @@ def main() -> None:
         return
 
     data_source = DEFAULT_PRICE_DATA_SOURCE or PriceDataSource.FMP
-    logger.info("Starting historical data update for %s symbols using %s.", len(symbols), data_source.value)
+    logger.info(
+        "Starting historical data update for %s symbols using %s.",
+        len(symbols),
+        data_source.value,
+    )
 
     for sym in symbols:
         try:

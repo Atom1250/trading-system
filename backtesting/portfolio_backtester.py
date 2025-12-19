@@ -1,12 +1,11 @@
 """Portfolio-level backtesting aggregation."""
+
 from __future__ import annotations
 
-from pathlib import Path
-from typing import Dict
-
 import logging
-import pandas as pd
+from pathlib import Path
 
+import pandas as pd
 
 logger = logging.getLogger(__name__)
 
@@ -22,7 +21,9 @@ class PortfolioBacktester:
         self.results_path = Path(results_path)
         self.strategy_return_column = strategy_return_column
 
-    def run(self, results_by_symbol: Dict[str, pd.DataFrame]) -> dict[str, pd.DataFrame | float | str]:
+    def run(
+        self, results_by_symbol: dict[str, pd.DataFrame],
+    ) -> dict[str, pd.DataFrame | float | str]:
         """Run a simple equal-weight portfolio backtest from individual results.
 
         Args:
@@ -32,6 +33,7 @@ class PortfolioBacktester:
         Returns:
             Dict containing portfolio-level results, cumulative return, max drawdown,
             and the export path for the aggregated CSV.
+
         """
         if not results_by_symbol:
             raise ValueError("No results provided for portfolio backtest.")
@@ -40,7 +42,7 @@ class PortfolioBacktester:
         for symbol, df in results_by_symbol.items():
             if self.strategy_return_column not in df.columns:
                 raise KeyError(
-                    f"Column '{self.strategy_return_column}' not found in results for {symbol}."
+                    f"Column '{self.strategy_return_column}' not found in results for {symbol}.",
                 )
             series = df[self.strategy_return_column].rename(symbol)
             return_series.append(series)
@@ -59,14 +61,18 @@ class PortfolioBacktester:
                 "equity_curve": equity_curve,
                 "cumulative_returns": cumulative_returns,
                 "drawdown": drawdown,
-            }
+            },
         )
 
         self._export_results(results)
 
-        logger.info("Portfolio backtest completed; results exported to %s", self.results_path)
+        logger.info(
+            "Portfolio backtest completed; results exported to %s", self.results_path,
+        )
 
-        cumulative_return = float(cumulative_returns.iloc[-1]) if not results.empty else 0.0
+        cumulative_return = (
+            float(cumulative_returns.iloc[-1]) if not results.empty else 0.0
+        )
         max_drawdown = float(drawdown.min()) if not results.empty else 0.0
 
         return {

@@ -1,0 +1,22 @@
+[tool.ruff]
+line-length = 88
+
+# Lint-specific configuration (use new nested 'lint' block as recommended by ruff)
+[tool.ruff.lint]
+# Ignore complex/cyclomatic rules and docstring nitpicks initially; tighten these over time.
+extend-ignore = [
+  "C901",  # too complex
+  "PLR0912", # too many branches
+  "PLR0915", # too many statements
+  "D100", "D200", "D205", "D212", "D413",  # docstring formatting rules (pydocstyle)
+  "UP035", "UP006",  # typing deprecation / 'List' usage
+  "BLE001",  # blind excepts (we'll progressively fix)
+  "DTZ001",  # timezone checks in Streamlit UI
+  "PLR2004", # magic numeric constants
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Ignore docstring and complexity-related issues in UI/story scripts
+"ui_streamlit.py" = ["D100", "D200", "D205", "D212", "D413"]
+# Allow larger function complexity in validation utils while we refactor them incrementally
+"utils/data_validation.py" = ["C901", "PLR0912", "PLR0915"]

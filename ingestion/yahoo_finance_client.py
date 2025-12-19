@@ -1,4 +1,5 @@
 """Client for downloading historical data from Yahoo Finance."""
+
 from datetime import datetime
 from typing import Optional
 
@@ -13,13 +14,11 @@ class YahooFinanceClient:
         start: Optional[datetime] = None,
         end: Optional[datetime] = None,
     ) -> pd.DataFrame:
-        """
-        Download daily OHLCV data for `symbol` from Yahoo Finance.
+        """Download daily OHLCV data for `symbol` from Yahoo Finance.
         Return a DataFrame with a DateTime index and columns:
         ['open', 'high', 'low', 'close', 'adj_close', 'volume'].
         If start/end are None, default to a long history (e.g. 'max').
         """
-
         download_kwargs = {
             "interval": "1d",
             "progress": False,
@@ -42,11 +41,15 @@ class YahooFinanceClient:
             return pd.DataFrame(columns=expected_columns)
 
         if getattr(raw.index, "tz", None) is not None:
-            raw.index = raw.index.tz_localize(None)
+            try:
+                # Prefer tz_convert for timezone-aware indexes; fall back to tz_localize
+                raw.index = raw.index.tz_convert(None)
+            except Exception:
+                raw.index = raw.index.tz_localize(None)
 
         # Remove duplicate dates before reindexing (keep last occurrence)
         if raw.index.duplicated().any():
-            raw = raw[~raw.index.duplicated(keep='last')]
+            raw = raw[~raw.index.duplicated(keep="last")]
 
         data = raw.rename(
             columns={
@@ -56,7 +59,7 @@ class YahooFinanceClient:
                 "Close": "close",
                 "Adj Close": "adj_close",
                 "Volume": "volume",
-            }
+            },
         ).reindex(columns=expected_columns)
 
         data = data.dropna(subset=["close"])
