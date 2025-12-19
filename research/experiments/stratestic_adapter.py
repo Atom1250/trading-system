@@ -16,15 +16,16 @@ _REQUIRED_COLUMNS: set[str] = {"open", "high", "low", "close", "volume"}
 def _validate_ohlcv_dataframe(df: pd.DataFrame) -> None:
     missing: set[str] = _REQUIRED_COLUMNS.difference(df.columns)
     if missing:
-        raise ValueError(f"DataFrame is missing required OHLCV columns: {sorted(missing)}")
+        raise ValueError(
+            f"DataFrame is missing required OHLCV columns: {sorted(missing)}",
+        )
 
     if not isinstance(df.index, pd.DatetimeIndex):
         raise TypeError("DataFrame index must be a pandas.DatetimeIndex")
 
 
-def dataframe_to_stratestic_timeseries(df: pd.DataFrame) -> "PriceSeries":
-    """
-    Convert an OHLCV ``DataFrame`` into Stratestic's canonical :class:`~stratestic.data.PriceSeries`.
+def dataframe_to_stratestic_timeseries(df: pd.DataFrame) -> PriceSeries:
+    """Convert an OHLCV ``DataFrame`` into Stratestic's canonical :class:`~stratestic.data.PriceSeries`.
 
     The incoming frame is expected to have a :class:`~pandas.DatetimeIndex` and at least the
     ``open``, ``high``, ``low``, ``close``, and ``volume`` columns. Data is sorted by index and
@@ -39,8 +40,8 @@ def dataframe_to_stratestic_timeseries(df: pd.DataFrame) -> "PriceSeries":
     -------
     PriceSeries
         A Stratestic ``PriceSeries`` instance representing the same OHLCV history.
-    """
 
+    """
     _validate_ohlcv_dataframe(df)
 
     from stratestic.data import PriceSeries

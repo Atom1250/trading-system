@@ -1,4 +1,5 @@
 """RSI mean-reversion trading strategy implementation."""
+
 from __future__ import annotations
 
 import pandas as pd
@@ -40,7 +41,6 @@ class RSIMeanReversionStrategy:
 
     def run(self, df: pd.DataFrame, price_column: str = "close") -> pd.DataFrame:
         """Run the RSI mean-reversion strategy and return the annotated DataFrame."""
-
         if price_column not in df.columns:
             raise KeyError(f"Column '{price_column}' not found in DataFrame.")
 
