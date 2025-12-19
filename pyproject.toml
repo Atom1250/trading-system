@@ -50,3 +50,16 @@ include = [
   "backtesting*",
   "trading_backtester*",
 ]
+
+[project.optional-dependencies]
+# Developer dependency group for local development and checks
+dev = [
+  "mypy",
+  "types-requests",
+  "types-PyYAML",
+  "types-cachetools",
+  "pre-commit",
+  "ruff",
+  "black",
+  "isort",
+]
