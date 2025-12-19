@@ -1,20 +1,23 @@
 """Core data models for the trading system."""
+
 from datetime import datetime
 from decimal import Decimal
 from enum import Enum
-from typing import Optional
 
-from pydantic import BaseModel, Field, ConfigDict
+from typing import Optional
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class PositionSide(str, Enum):
     """Position side enum."""
+
     LONG = "long"
     SHORT = "short"
 
 
 class OrderType(str, Enum):
     """Order type enum."""
+
     MARKET = "market"
     LIMIT = "limit"
     STOP = "stop"
@@ -23,6 +26,7 @@ class OrderType(str, Enum):
 
 class TradeStatus(str, Enum):
     """Trade status enum."""
+
     OPEN = "open"
     CLOSED = "closed"
     CANCELLED = "cancelled"
@@ -31,6 +35,7 @@ class TradeStatus(str, Enum):
 # Portfolio Models
 class PortfolioBase(BaseModel):
     """Base portfolio model."""
+
     name: str = Field(..., description="Portfolio name")
     description: Optional[str] = Field(None, description="Portfolio description")
     initial_capital: Decimal = Field(..., description="Initial capital")
@@ -39,13 +44,14 @@ class PortfolioBase(BaseModel):
 
 class PortfolioCreate(PortfolioBase):
     """Portfolio creation model."""
-    pass
+
 
 
 class Portfolio(PortfolioBase):
     """Portfolio model with ID and timestamps."""
+
     model_config = ConfigDict(from_attributes=True)
-    
+
     id: int
     current_value: Decimal = Field(..., description="Current portfolio value")
     cash_balance: Decimal = Field(..., description="Available cash")
@@ -56,6 +62,7 @@ class Portfolio(PortfolioBase):
 # Position Models
 class PositionBase(BaseModel):
     """Base position model."""
+
     symbol: str = Field(..., description="Stock symbol")
     quantity: Decimal = Field(..., description="Number of shares")
     side: PositionSide = Field(..., description="Long or short")
@@ -64,13 +71,15 @@ class PositionBase(BaseModel):
 
 class PositionCreate(PositionBase):
     """Position creation model."""
+
     portfolio_id: int
 
 
 class Position(PositionBase):
     """Position model with ID and metrics."""
+
     model_config = ConfigDict(from_attributes=True)
-    
+
     id: int
     portfolio_id: int
     current_price: Optional[Decimal] = Field(None, description="Current market price")
@@ -83,24 +92,29 @@ class Position(PositionBase):
 # Trade Models
 class TradeBase(BaseModel):
     """Base trade model."""
+
     symbol: str = Field(..., description="Stock symbol")
     quantity: Decimal = Field(..., description="Number of shares")
     price: Decimal = Field(..., description="Execution price")
     side: PositionSide = Field(..., description="Buy or sell")
     order_type: OrderType = Field(default=OrderType.MARKET, description="Order type")
-    commission: Decimal = Field(default=Decimal("0"), description="Commission paid")
+    commission: Decimal = Field(default=Decimal(0), description="Commission paid")
 
 
 class TradeCreate(TradeBase):
     """Trade creation model."""
+
     portfolio_id: int
-    strategy_id: Optional[int] = Field(None, description="Strategy that generated trade")
+    strategy_id: Optional[int] = Field(
+        None, description="Strategy that generated trade",
+    )
 
 
 class Trade(TradeBase):
     """Trade model with ID and status."""
+
     model_config = ConfigDict(from_attributes=True)
-    
+
     id: int
     portfolio_id: int
     strategy_id: Optional[int]
@@ -113,6 +127,7 @@ class Trade(TradeBase):
 # Performance Metrics Models
 class PortfolioMetrics(BaseModel):
     """Portfolio performance metrics."""
+
     total_value: Decimal
     cash_balance: Decimal
     positions_value: Decimal
@@ -131,6 +146,7 @@ class PortfolioMetrics(BaseModel):
 
 class PortfolioHistory(BaseModel):
     """Portfolio value history point."""
+
     date: datetime
     total_value: Decimal
     cash_balance: Decimal

@@ -1,8 +1,10 @@
 """Placeholder routers for other API modules."""
+
 from fastapi import APIRouter
 
 # Strategies router
 router_strategies = APIRouter()
+
 
 @router_strategies.get("/")
 async def list_strategies():
@@ -13,6 +15,7 @@ async def list_strategies():
 # Signals router
 router_signals = APIRouter()
 
+
 @router_signals.get("/technical/{symbol}")
 async def get_technical_signals(symbol: str):
     """Get technical signals for a symbol."""
@@ -22,6 +25,7 @@ async def get_technical_signals(symbol: str):
 # AI router
 router_ai = APIRouter()
 
+
 @router_ai.post("/risk_assessment")
 async def assess_risk():
     """Assess portfolio risk."""
@@ -30,6 +34,7 @@ async def assess_risk():
 
 # Data router
 router_data = APIRouter()
+
 
 @router_data.get("/prices/{symbol}")
 async def get_prices(symbol: str):

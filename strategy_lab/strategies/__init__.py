@@ -1,4 +1,5 @@
 """Strategies module - Strategy implementations for the lab environment."""
-from strategy_lab.strategies.base import Strategy, Signal
 
-__all__ = ["Strategy", "Signal"]
+from strategy_lab.strategies.base import Signal, Strategy
+
+__all__ = ["Signal", "Strategy"]

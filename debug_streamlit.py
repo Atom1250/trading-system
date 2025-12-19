@@ -1,6 +1,6 @@
-import streamlit as st
-import pandas as pd
 import numpy as np
+import pandas as pd
+import streamlit as st
 
 st.title("Debug App")
 st.write("If you can see this, Streamlit backend <-> frontend connection is working.")

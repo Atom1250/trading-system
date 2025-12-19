@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import logging
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any
 
 from config.settings import FUNDAMENTAL_DATA_DIR, ensure_data_directories
 
@@ -16,9 +16,8 @@ def fundamentals_file_path(symbol: str) -> Path:
     return FUNDAMENTAL_DATA_DIR / f"{symbol.upper()}.json"
 
 
-def load_local_fundamentals(symbol: str) -> Dict[str, Any]:
-    """
-    Load fundamentals for a symbol from JSON if present; return {} otherwise.
+def load_local_fundamentals(symbol: str) -> dict[str, Any]:
+    """Load fundamentals for a symbol from JSON if present; return {} otherwise.
     """
     ensure_data_directories()
     path = fundamentals_file_path(symbol)
@@ -34,12 +33,13 @@ def load_local_fundamentals(symbol: str) -> Dict[str, Any]:
         return {}
 
 
-def get_fundamentals(symbol: str, use_local_repository: bool = True) -> Dict[str, Any]:
-    """
-    Retrieve fundamentals for ``symbol``. Currently supports local repository reads.
+def get_fundamentals(symbol: str, use_local_repository: bool = True) -> dict[str, Any]:
+    """Retrieve fundamentals for ``symbol``. Currently supports local repository reads.
     """
     if use_local_repository:
         return load_local_fundamentals(symbol)
 
-    logger.info("Non-local fundamentals lookup for %s not implemented; returning empty.", symbol)
+    logger.info(
+        "Non-local fundamentals lookup for %s not implemented; returning empty.", symbol,
+    )
     return {}
