@@ -10,7 +10,9 @@ class ExportService:
     """Service for exporting data to files."""
 
     def export_portfolio(
-        self, portfolio_data: dict[str, Any], format: str = "csv",
+        self,
+        portfolio_data: dict[str, Any],
+        format: str = "csv",
     ) -> bytes:
         """Export portfolio data to CSV or Excel.
         Returns bytes content of the file.
@@ -45,7 +47,9 @@ class ExportService:
                     "Name": portfolio_data.get("name"),
                 }
                 pd.DataFrame([summary]).to_excel(
-                    writer, sheet_name="Summary", index=False,
+                    writer,
+                    sheet_name="Summary",
+                    index=False,
                 )
 
         else:

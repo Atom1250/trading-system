@@ -4,7 +4,6 @@ This module implements strategies that generate signals based on predefined rule
 and weighted factors.
 """
 
-
 import pandas as pd
 
 from ..config import StrategyConfig
@@ -35,7 +34,9 @@ class MultiSignalRuleStrategy(Strategy):
         self.threshold = self.config.parameters.get("threshold", 0.0)
 
     def generate_signals(
-        self, data: MarketDataSlices, factor_panels: FactorPanels,
+        self,
+        data: MarketDataSlices,
+        factor_panels: FactorPanels,
     ) -> dict[str, pd.Series]:
         """Generate signals based on weighted factor scores.
 

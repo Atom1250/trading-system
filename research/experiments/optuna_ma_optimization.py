@@ -9,9 +9,8 @@ from typing import Any, Optional, Tuple
 import optuna
 import pandas as pd
 
-from research.experiments.single_asset_stratestic_backtest import (
-    run_stratestic_backtest_for_symbol,
-)
+from research.experiments.single_asset_stratestic_backtest import \
+    run_stratestic_backtest_for_symbol
 
 
 def _risk_adjusted_score(metrics: dict[str, Any]) -> float:
@@ -39,10 +38,14 @@ def _objective(
 ):
     def objective(trial: optuna.trial.Trial) -> float:
         short_window = trial.suggest_int(
-            "short_window", short_window_range[0], short_window_range[1],
+            "short_window",
+            short_window_range[0],
+            short_window_range[1],
         )
         long_window = trial.suggest_int(
-            "long_window", long_window_range[0], long_window_range[1],
+            "long_window",
+            long_window_range[0],
+            long_window_range[1],
         )
 
         if short_window >= long_window:

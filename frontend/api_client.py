@@ -1,11 +1,11 @@
 """API client for Streamlit frontend."""
 
+import logging
 import os
 from datetime import datetime
 from typing import Any, Optional
 
 import requests
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -15,7 +15,8 @@ class TradingSystemAPI:
 
     def __init__(self, base_url: str = None):
         self.base_url = base_url or os.environ.get(
-            "BACKEND_URL", "http://localhost:8000",
+            "BACKEND_URL",
+            "http://localhost:8000",
         )
         self.session = requests.Session()
 
@@ -50,7 +51,8 @@ class TradingSystemAPI:
             "currency": currency,
         }
         response = self.session.post(
-            f"{self.base_url}/api/v1/portfolios/", json=payload,
+            f"{self.base_url}/api/v1/portfolios/",
+            json=payload,
         )
         return self._handle_response(response)
 
@@ -102,7 +104,8 @@ class TradingSystemAPI:
             params["end_date"] = end_date.isoformat()
 
         response = self.session.get(
-            f"{self.base_url}/api/v1/data/prices/{symbol}", params=params,
+            f"{self.base_url}/api/v1/data/prices/{symbol}",
+            params=params,
         )
         return self._handle_response(response)
 
@@ -144,7 +147,8 @@ class TradingSystemAPI:
             payload["end_date"] = end_date.isoformat()
 
         response = self.session.post(
-            f"{self.base_url}/api/v1/strategies/backtest", json=payload,
+            f"{self.base_url}/api/v1/strategies/backtest",
+            json=payload,
         )
         return self._handle_response(response)
 
@@ -210,7 +214,9 @@ class TradingSystemAPI:
 
     # Integration endpoints
     def export_to_google_sheets(
-        self, portfolio_id: int, spreadsheet_name: Optional[str] = None,
+        self,
+        portfolio_id: int,
+        spreadsheet_name: Optional[str] = None,
     ) -> dict:
         """Export portfolio to Google Sheets."""
         params = {}
@@ -247,15 +253,22 @@ class TradingSystemAPI:
                 "direction": direction,
             }
             response = self.session.post(
-                f"{self.base_url}/api/v1/optimization/run", json=payload,
+                f"{self.base_url}/api/v1/optimization/run",
+                json=payload,
             )
             return self._handle_response(response)
         except requests.RequestException as exc:
-            logger.exception("Optimization request failed for strategy %s on symbol %s", strategy_name, symbol)
+            logger.exception(
+                "Optimization request failed for strategy %s on symbol %s",
+                strategy_name,
+                symbol,
+            )
             raise Exception(f"Optimization failed: {exc!s}") from exc
 
     def download_portfolio_export(
-        self, portfolio_id: int, format: str = "csv",
+        self,
+        portfolio_id: int,
+        format: str = "csv",
     ) -> bytes:
         """Download portfolio export file content."""
         response = self.session.get(

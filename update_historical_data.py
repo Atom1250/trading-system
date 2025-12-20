@@ -1,18 +1,11 @@
 import logging
 from pathlib import Path
 
-from config.settings import (
-    DEFAULT_PRICE_DATA_SOURCE,
-    UNIVERSE_DIR,
-    PriceDataSource,
-    ensure_data_directories,
-)
-from repository.prices_repository import (
-    append_new_rows,
-    fetch_and_cache_prices,
-    load_local_prices,
-    price_file_path,
-)
+from config.settings import (DEFAULT_PRICE_DATA_SOURCE, UNIVERSE_DIR,
+                             PriceDataSource, ensure_data_directories)
+from repository.prices_repository import (append_new_rows,
+                                          fetch_and_cache_prices,
+                                          load_local_prices, price_file_path)
 
 logger = logging.getLogger(__name__)
 
@@ -74,10 +67,10 @@ def update_symbol_daily(symbol: str, data_source: PriceDataSource) -> None:
 
 
 def main() -> None:
-    """Load universe and update historical prices using the configured data source (defaults to FMP).
-    """
+    """Load universe and update historical prices using the configured data source (defaults to FMP)."""
     logging.basicConfig(
-        level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s",
+        level=logging.INFO,
+        format="%(asctime)s [%(levelname)s] %(message)s",
     )
     ensure_data_directories()
 

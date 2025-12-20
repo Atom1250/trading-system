@@ -7,27 +7,17 @@ with RiskConfig and enforces constraints.
 from decimal import Decimal
 from typing import Optional
 
-from strategy_lab.config import (
-    CapitalAllocationMode,
-    EntryMode,
-    RiskConfig,
-    RiskConstraintConfig,
-)
-from strategy_lab.risk.constraints import (
-    PortfolioConstraint,
-    PositionConstraint,
-    RiskLimitConstraint,
-)
-from strategy_lab.risk.portfolio_state import (
-    PortfolioState,
-    PositionSide,
-    PositionState,
-)
+from strategy_lab.config import (CapitalAllocationMode, EntryMode, RiskConfig,
+                                 RiskConstraintConfig)
+from strategy_lab.risk.constraints import (PortfolioConstraint,
+                                           PositionConstraint,
+                                           RiskLimitConstraint)
+from strategy_lab.risk.portfolio_state import (PortfolioState, PositionSide,
+                                               PositionState)
 
 
 class RiskViolation(Exception):
     """Exception raised when a trade violates risk constraints."""
-
 
 
 class RiskEngine:
@@ -79,7 +69,10 @@ class RiskEngine:
         )
 
     def _check_entry_mode(
-        self, symbol: str, side: PositionSide, portfolio: PortfolioState,
+        self,
+        symbol: str,
+        side: PositionSide,
+        portfolio: PortfolioState,
     ) -> None:
         """Check if entry is allowed based on entry mode logic.
 
@@ -130,7 +123,10 @@ class RiskEngine:
             )
 
     def _calc_position_size(
-        self, price: float, atr: float, portfolio: PortfolioState,
+        self,
+        price: float,
+        atr: float,
+        portfolio: PortfolioState,
     ) -> Decimal:
         """Calculate position size based on capital allocation model.
 
@@ -239,7 +235,10 @@ class RiskEngine:
     # We'll keep helpers that might be useful.
 
     def calculate_stop_loss(
-        self, entry_price: float, atr: float, direction: int = 1,
+        self,
+        entry_price: float,
+        atr: float,
+        direction: int = 1,
     ) -> float:
         """Calculate stop loss price."""
         stop_distance = atr * self.risk_config.stop_loss_atr_multiple

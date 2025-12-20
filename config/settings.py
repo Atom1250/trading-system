@@ -38,15 +38,18 @@ DEFAULT_PRICE_DATA_SOURCE = PriceDataSource(
 # API key and base URL for FinancialModelingPrep (for fundamentals and prices)
 FMP_API_KEY = os.environ.get("FMP_API_KEY", "")
 FMP_BASE_URL = os.environ.get(
-    "FMP_BASE_URL", "https://financialmodelingprep.com/stable",
+    "FMP_BASE_URL",
+    "https://financialmodelingprep.com/stable",
 )
 FMP_FALLBACK_BASE_URL = os.environ.get(
-    "FMP_FALLBACK_BASE_URL", "https://financialmodelingprep.com/stable",
+    "FMP_FALLBACK_BASE_URL",
+    "https://financialmodelingprep.com/stable",
 )
 
 if not FMP_API_KEY:
     logging.getLogger(__name__).warning(
-        "FMP_API_KEY is not set. Loaded .env from %s", DOTENV_PATH or "environment",
+        "FMP_API_KEY is not set. Loaded .env from %s",
+        DOTENV_PATH or "environment",
     )
 
 # Strategy configuration path

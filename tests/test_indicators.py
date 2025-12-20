@@ -67,7 +67,8 @@ class TestStrategySignals:
 
     def test_moving_average_crossover_signals(self):
         """Test MA crossover signal generation."""
-        from strategy.moving_average_crossover import MovingAverageCrossoverStrategy
+        from strategy.moving_average_crossover import \
+            MovingAverageCrossoverStrategy
 
         # Create test data with clear crossover
         dates = pd.date_range("2024-01-01", periods=100, freq="D")

@@ -1,11 +1,12 @@
 """Optimization API endpoints."""
 
 import traceback
+from typing import Optional
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
+
 from services.strategy.optimization_service import optimization_service
-from typing import Optional
 
 router = APIRouter()
 

@@ -4,6 +4,7 @@ from decimal import Decimal
 
 import pytest
 import yaml
+
 from services.analytics.aggregator import signal_aggregator
 from services.strategy.registry import StrategyRegistry
 
@@ -21,11 +22,8 @@ class DummySentimentService:
 def test_aggregator_handles_missing_technical(monkeypatch):
     """If technical service errors, aggregator should continue and compute based on others."""
     # Make technical service raise
-    from services.analytics import (
-        fundamental_service,
-        sentiment_service,
-        technical_service,
-    )
+    from services.analytics import (fundamental_service, sentiment_service,
+                                    technical_service)
 
     def _raise():
         raise RuntimeError("boom")
@@ -59,18 +57,18 @@ def test_aggregator_handles_missing_technical(monkeypatch):
 
 def test_aggregator_all_none_returns_neutral(monkeypatch):
     """If all sources fail or return None, aggregator should return neutral 50 and 'hold'."""
-    from services.analytics import (
-        fundamental_service,
-        sentiment_service,
-        technical_service,
-    )
+    from services.analytics import (fundamental_service, sentiment_service,
+                                    technical_service)
 
     monkeypatch.setattr(technical_service, "calculate_indicators", lambda *a, **k: None)
     monkeypatch.setattr(fundamental_service, "get_fundamentals", lambda *a, **k: None)
     monkeypatch.setattr(sentiment_service, "get_sentiment", lambda *a, **k: None)
 
     res = signal_aggregator.aggregate_signals(
-        "TEST", include_technical=True, include_fundamental=True, include_sentiment=True,
+        "TEST",
+        include_technical=True,
+        include_fundamental=True,
+        include_sentiment=True,
     )
 
     assert res["combined_score"] == Decimal(50)

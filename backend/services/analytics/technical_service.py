@@ -21,7 +21,9 @@ class TechnicalIndicatorsService:
         self.price_service = PriceDataService()
 
     def calculate_indicators(
-        self, symbol: str, data_source: str = "local",
+        self,
+        symbol: str,
+        data_source: str = "local",
     ) -> dict[str, Any]:
         """Calculate technical indicators for a symbol.
 

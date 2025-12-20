@@ -4,17 +4,12 @@ from datetime import datetime, timedelta
 from decimal import Decimal
 from typing import Optional
 
-from db.models import PortfolioDB, PortfolioHistoryDB, PositionDB, TradeDB
-from models.portfolio import (
-    Portfolio,
-    PortfolioCreate,
-    PortfolioHistory,
-    PortfolioMetrics,
-    Position,
-    Trade,
-)
 from sqlalchemy import desc
 from sqlalchemy.orm import Session
+
+from db.models import PortfolioDB, PortfolioHistoryDB, PositionDB, TradeDB
+from models.portfolio import (Portfolio, PortfolioCreate, PortfolioHistory,
+                              PortfolioMetrics, Position, Trade)
 
 
 def create_portfolio(db: Session, portfolio: PortfolioCreate) -> Portfolio:
@@ -54,7 +49,10 @@ def get_positions(db: Session, portfolio_id: int) -> list[Position]:
 
 
 def get_trades(
-    db: Session, portfolio_id: int, skip: int = 0, limit: int = 100,
+    db: Session,
+    portfolio_id: int,
+    skip: int = 0,
+    limit: int = 100,
 ) -> list[Trade]:
     """Get trade history for a portfolio."""
     trades = (
@@ -156,7 +154,9 @@ def calculate_metrics(db: Session, portfolio_id: int) -> PortfolioMetrics:
 
 
 def get_history(
-    db: Session, portfolio_id: int, days: int = 30,
+    db: Session,
+    portfolio_id: int,
+    days: int = 30,
 ) -> list[PortfolioHistory]:
     """Get historical values for a portfolio."""
     cutoff_date = datetime.now() - timedelta(days=days)
@@ -210,7 +210,10 @@ class PortfolioService:
         return get_positions(self.db, portfolio_id)
 
     def get_trades(
-        self, portfolio_id: int, skip: int = 0, limit: int = 100,
+        self,
+        portfolio_id: int,
+        skip: int = 0,
+        limit: int = 100,
     ) -> list[Trade]:
         if self.db is None:
             raise RuntimeError("Database session not set on PortfolioService")

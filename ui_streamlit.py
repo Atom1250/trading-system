@@ -5,15 +5,11 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import streamlit as st
 
-from config.settings import (
-    PriceDataSource,
-    ensure_data_directories,
-)
+from config.settings import PriceDataSource, ensure_data_directories
 from indicators.technicals import bollinger_bands
 from repository.prices_repository import get_prices_for_backtest
 from run_strategy import load_strategy_config, run_backtest
 from strategy_lab.backtest.engine import StrategyBacktestEngine
-
 # Strategy Lab Imports
 from strategy_lab.config import RiskConfig, StrategyConfig
 from strategy_lab.data.providers import YFinanceHistoricalProvider
@@ -181,9 +177,11 @@ if mode == "Single Backtest":
     strategy_name = st.selectbox(
         "Strategy",
         options=strategy_names,
-        index=strategy_names.index(default_strategy)
-        if default_strategy in strategy_names
-        else 0,
+        index=(
+            strategy_names.index(default_strategy)
+            if default_strategy in strategy_names
+            else 0
+        ),
     )
     strategy_def = strategies.get(strategy_name, {})
     strategy_params = strategy_def.get("params", {}) or {}
@@ -330,7 +328,8 @@ if mode == "Single Backtest":
                     results_df = in_memory.copy()
                     if not isinstance(results_df.index, pd.DatetimeIndex):
                         results_df.index = pd.to_datetime(
-                            results_df.index, errors="coerce",
+                            results_df.index,
+                            errors="coerce",
                         )
                     results_df.sort_index(inplace=True)
 
@@ -392,7 +391,9 @@ if mode == "Single Backtest":
                 chart_df = results_df.copy()
                 bollinger_window = int(long_window) if long_window else 20
                 chart_df = bollinger_bands(
-                    chart_df, window=bollinger_window, column="close",
+                    chart_df,
+                    window=bollinger_window,
+                    column="close",
                 )
 
                 has_macd = {"MACD_line", "MACD_signal", "MACD_hist"}.issubset(
@@ -522,15 +523,24 @@ if mode == "Single Backtest":
                     rsi_ax = axes[axis_idx]
                     rsi_col = rsi_columns[0]
                     rsi_ax.plot(
-                        date_index, chart_df[rsi_col], label=rsi_col, color="brown",
+                        date_index,
+                        chart_df[rsi_col],
+                        label=rsi_col,
+                        color="brown",
                     )
                     lower = user_strategy_params.get("lower_threshold", 30)
                     upper = user_strategy_params.get("upper_threshold", 70)
                     rsi_ax.axhline(
-                        lower, color="green", linestyle=":", label="Lower threshold",
+                        lower,
+                        color="green",
+                        linestyle=":",
+                        label="Lower threshold",
                     )
                     rsi_ax.axhline(
-                        upper, color="red", linestyle=":", label="Upper threshold",
+                        upper,
+                        color="red",
+                        linestyle=":",
+                        label="Upper threshold",
                     )
                     rsi_ax.set_ylabel("RSI")
                     rsi_ax.set_ylim(0, 100)
@@ -549,16 +559,21 @@ elif mode == "Optimize Strategy":
 
     col_strat, col_sym = st.columns(2)
     strat_name = col_strat.selectbox(
-        "Strategy Class", ["MultiSignalRuleStrategy", "VolumeMoveBreakoutStrategy"],
+        "Strategy Class",
+        ["MultiSignalRuleStrategy", "VolumeMoveBreakoutStrategy"],
     )
     opt_symbol = col_sym.text_input("Symbol", value="AAPL")
 
     col_d1, col_d2 = st.columns(2)
     start_date = col_d1.date_input(
-        "Start Date", value=datetime(2023, 1, 1), key="opt_start",
+        "Start Date",
+        value=datetime(2023, 1, 1),
+        key="opt_start",
     )
     end_date = col_d2.date_input(
-        "End Date", value=datetime(2023, 12, 31), key="opt_end",
+        "End Date",
+        value=datetime(2023, 12, 31),
+        key="opt_end",
     )
 
     n_trials = int(st.number_input("Number of Trials", min_value=10, value=20, step=10))
@@ -577,7 +592,9 @@ elif mode == "Optimize Strategy":
         # Factors fixed for now
         avail = FactorRegistry.list_factors()
         factors = st.multiselect(
-            "Fixed Factors", avail, default=["sma_cross", "rsi_oversold"],
+            "Fixed Factors",
+            avail,
+            default=["sma_cross", "rsi_oversold"],
         )
         fixed_params["factors"] = factors
         fixed_params["weights"] = dict.fromkeys(factors, 1.0)
@@ -653,7 +670,10 @@ elif mode == "Strategy Lab":
         c1, c2 = st.columns(2)
         initial_cap = c1.number_input("Initial Equity", value=100000.0, step=1000.0)
         risk_per_trade = c2.number_input(
-            "Risk % per Trade", value=0.01, step=0.005, format="%.3f",
+            "Risk % per Trade",
+            value=0.01,
+            step=0.005,
+            format="%.3f",
         )
         max_dd = c1.number_input("Max Drawdown limit", value=0.20, step=0.05)
         stop_atr = c2.number_input("Stop Loss ATR", value=1.5, step=0.1)
@@ -661,7 +681,8 @@ elif mode == "Strategy Lab":
     # 3. Strategy Settings
     with st.expander("Strategy Logic", expanded=True):
         strategy_class_name = st.selectbox(
-            "Strategy Class", ["MultiSignalRuleStrategy", "VolumeMoveBreakoutStrategy"],
+            "Strategy Class",
+            ["MultiSignalRuleStrategy", "VolumeMoveBreakoutStrategy"],
         )
 
         lab_params = {}
@@ -670,7 +691,9 @@ elif mode == "Strategy Lab":
             # Factor Selection
             available_factors = FactorRegistry.list_factors()
             selected_factors = st.multiselect(
-                "Active Factors", available_factors, default=available_factors,
+                "Active Factors",
+                available_factors,
+                default=available_factors,
             )
 
             # Weights (simple equal weight logic for now, or dynamic inputs)
@@ -680,7 +703,9 @@ elif mode == "Strategy Lab":
                 cols = st.columns(len(selected_factors))
                 for i, f in enumerate(selected_factors):
                     weights[f] = cols[i].number_input(
-                        f"{f} weight", value=1.0, key=f"w_{f}",
+                        f"{f} weight",
+                        value=1.0,
+                        key=f"w_{f}",
                     )
 
             threshold = st.slider("Signal Threshold", 0.0, 5.0, 0.5, step=0.1)

@@ -20,11 +20,8 @@ from strategy_lab.backtest.results import BacktestResults
 from strategy_lab.data.base import HistoricalDataProvider, MarketDataSlice
 from strategy_lab.factors.base import FactorRegistry
 from strategy_lab.risk.engine import RiskEngine, RiskViolation
-from strategy_lab.risk.portfolio_state import (
-    PortfolioState,
-    PositionSide,
-    PositionState,
-)
+from strategy_lab.risk.portfolio_state import (PortfolioState, PositionSide,
+                                               PositionState)
 from strategy_lab.sentiment.pipeline import SentimentPipeline
 from strategy_lab.strategies.base import Strategy
 
@@ -97,7 +94,9 @@ class StrategyBacktestEngine:
         market_data: dict[str, MarketDataSlice] = {}
         for symbol in universe:
             market_data[symbol] = self.data_provider.get_history(
-                symbol, start_date, end_date,
+                symbol,
+                start_date,
+                end_date,
             )
 
         if not market_data:
@@ -111,7 +110,8 @@ class StrategyBacktestEngine:
         # 2. Compute Factors (Pre-computation)
         print("Pre-computing factors...")
         factor_panels: dict[str, pd.DataFrame] = self._compute_factors(
-            strategy, market_data,
+            strategy,
+            market_data,
         )
 
         # 3. Generate Strategy Signals (Vectorised)
@@ -193,7 +193,11 @@ class StrategyBacktestEngine:
                     ):
                         # Close existing
                         self._execute_close(
-                            portfolio, symbol, price, timestamp, trade_log,
+                            portfolio,
+                            symbol,
+                            price,
+                            timestamp,
+                            trade_log,
                         )
                 # If not just a close, try to open/flip
                 # Note: If we just closed, we might want to open the new side immediately
@@ -214,7 +218,11 @@ class StrategyBacktestEngine:
 
                         # D. Execute Trade
                         self._execute_open(
-                            portfolio, proposed_pos, price, timestamp, trade_log,
+                            portfolio,
+                            proposed_pos,
+                            price,
+                            timestamp,
+                            trade_log,
                         )
 
                 except RiskViolation:
@@ -245,7 +253,9 @@ class StrategyBacktestEngine:
         )
 
     def _compute_factors(
-        self, strategy: Strategy, market_data: dict[str, MarketDataSlice],
+        self,
+        strategy: Strategy,
+        market_data: dict[str, MarketDataSlice],
     ) -> dict[str, pd.DataFrame]:
         """Compute factors for the universe.
 
@@ -260,7 +270,9 @@ class StrategyBacktestEngine:
         return panels
 
     def _get_signals_at_timestamp(
-        self, raw_signals: dict[str, pd.Series], timestamp,
+        self,
+        raw_signals: dict[str, pd.Series],
+        timestamp,
     ) -> dict[str, float]:
         """Extract signals for a specific timestamp."""
         current_signals = {}
@@ -308,9 +320,9 @@ class StrategyBacktestEngine:
             {
                 "timestamp": timestamp,
                 "symbol": position.symbol,
-                "type": "BUY_OPEN"
-                if position.side == PositionSide.LONG
-                else "SELL_OPEN",
+                "type": (
+                    "BUY_OPEN" if position.side == PositionSide.LONG else "SELL_OPEN"
+                ),
                 "price": price,
                 "quantity": float(position.quantity),
                 "pnl": 0.0,
