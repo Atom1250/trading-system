@@ -1,6 +1,7 @@
 """AI API endpoints."""
 
 from fastapi import APIRouter, HTTPException, Query
+
 from models.ai import FeatureImportance, ModelExplanation, RiskAssessment, RiskMetrics
 from services.ai.feature_service import feature_service
 from services.ai.risk_service import risk_service
@@ -46,7 +47,8 @@ async def get_feature_importance(
         )
     except Exception as e:
         raise HTTPException(
-            status_code=500, detail=f"Feature importance failed: {e!s}",
+            status_code=500,
+            detail=f"Feature importance failed: {e!s}",
         )
 
 

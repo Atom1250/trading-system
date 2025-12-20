@@ -133,11 +133,9 @@ class BacktestResults:
                         "timestamp": timestamp,
                         "signal": signal,
                         "price": price,
-                        "type": "LONG"
-                        if signal > 0
-                        else "SHORT"
-                        if signal < 0
-                        else "CLOSE",
+                        "type": (
+                            "LONG" if signal > 0 else "SHORT" if signal < 0 else "CLOSE"
+                        ),
                     },
                 )
 
@@ -192,9 +190,11 @@ Trade Statistics:
             "strategy_name": self.strategy_name,
             "metrics": self.get_metrics(),
             "equity_curve": self.get_equity_curve().to_dict(),
-            "trade_log": self.get_trade_log_df().to_dict("records")
-            if not self.get_trade_log_df().empty
-            else [],
+            "trade_log": (
+                self.get_trade_log_df().to_dict("records")
+                if not self.get_trade_log_df().empty
+                else []
+            ),
             "config": {
                 "initial_capital": self.config.initial_capital,
                 "commission": self.config.commission,

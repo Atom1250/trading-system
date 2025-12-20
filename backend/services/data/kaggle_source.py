@@ -2,8 +2,8 @@
 
 import sys
 from datetime import datetime
-from typing import Optional
 from pathlib import Path
+from typing import Optional
 
 import pandas as pd
 

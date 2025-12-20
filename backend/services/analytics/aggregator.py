@@ -35,21 +35,27 @@ class SignalAggregator:
             try:
                 technical = technical_service.calculate_indicators(symbol, data_source)
             except Exception as exc:
-                logger.exception("Error getting technical signals for %s: %s", symbol, exc)
+                logger.exception(
+                    "Error getting technical signals for %s: %s", symbol, exc
+                )
 
         # Get fundamental signals
         if include_fundamental:
             try:
                 fundamental = fundamental_service.get_fundamentals(symbol)
             except Exception as exc:
-                logger.exception("Error getting fundamental signals for %s: %s", symbol, exc)
+                logger.exception(
+                    "Error getting fundamental signals for %s: %s", symbol, exc
+                )
 
         # Get sentiment signals
         if include_sentiment:
             try:
                 sentiment = sentiment_service.get_sentiment(symbol)
             except Exception as exc:
-                logger.exception("Error getting sentiment signals for %s: %s", symbol, exc)
+                logger.exception(
+                    "Error getting sentiment signals for %s: %s", symbol, exc
+                )
 
         # Calculate combined score (0-100)
         scores = []

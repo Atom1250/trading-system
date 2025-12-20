@@ -40,7 +40,8 @@ class FundamentalSignals(BaseModel):
     metrics: list[FundamentalMetric]
     score: Decimal = Field(..., description="Fundamental score 0-100")
     rating: str = Field(
-        ..., description="Rating (strong_buy/buy/hold/sell/strong_sell)",
+        ...,
+        description="Rating (strong_buy/buy/hold/sell/strong_sell)",
     )
 
 

@@ -1,11 +1,11 @@
 """Generic Optuna Optimization for Strategy Lab."""
 
+import logging
 from datetime import datetime
 from typing import Any
 
 import optuna
 import pandas as pd
-import logging
 
 from strategy_lab.backtest.engine import StrategyBacktestEngine
 from strategy_lab.config import RiskConfig, StrategyConfig
@@ -25,7 +25,8 @@ def optimize_lab_strategy(
     initial_capital: float,
     n_trials: int,
     param_ranges: dict[
-        str, tuple[Any, Any, str],
+        str,
+        tuple[Any, Any, str],
     ],  # name -> (min, max, type='int'/'float')
     fixed_params: dict[str, Any] = None,
 ) -> dict[str, Any]:
@@ -56,7 +57,8 @@ def optimize_lab_strategy(
             max_drawdown_pct=0.50,  # Loose for optimization unless optimized
             risk_per_trade=0.01,
             stop_loss_atr_multiple=full_params.get(
-                "stop_loss_atr_multiple", 2.0,
+                "stop_loss_atr_multiple",
+                2.0,
             ),  # If not in params, use default
         )
 

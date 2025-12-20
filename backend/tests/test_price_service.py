@@ -5,6 +5,7 @@ from unittest.mock import patch
 
 import pandas as pd
 import pytest
+
 from services.data.price_service import PriceDataService
 
 

@@ -83,7 +83,9 @@ class ParameterSpace:
             elif bound.step:
                 # Arange equivalent
                 vals = np.arange(
-                    bound.min_value, bound.max_value + bound.step / 1000, bound.step,
+                    bound.min_value,
+                    bound.max_value + bound.step / 1000,
+                    bound.step,
                 )
                 # Ensure type correctness
                 if bound.param_type == "int":

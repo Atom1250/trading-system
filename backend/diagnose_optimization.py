@@ -1,6 +1,7 @@
 import traceback
 
 import pydantic
+
 from services.strategy.optimization_service import optimization_service
 
 

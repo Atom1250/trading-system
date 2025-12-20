@@ -74,10 +74,10 @@ def update_symbol_daily(symbol: str, data_source: PriceDataSource) -> None:
 
 
 def main() -> None:
-    """Load universe and update historical prices using the configured data source (defaults to FMP).
-    """
+    """Load universe and update historical prices using the configured data source (defaults to FMP)."""
     logging.basicConfig(
-        level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s",
+        level=logging.INFO,
+        format="%(asctime)s [%(levelname)s] %(message)s",
     )
     ensure_data_directories()
 

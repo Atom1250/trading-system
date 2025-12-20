@@ -8,12 +8,13 @@ from typing import Optional
 import pandas as pd
 
 from services.data.base import DataSource
+
 # Expose concrete data source classes at module level so unit tests can patch them.
 try:
     from services.data.fmp_source import FMPDataSource
-    from services.data.yahoo_source import YahooDataSource
     from services.data.kaggle_source import KaggleDataSource
     from services.data.local_source import LocalDataSource
+    from services.data.yahoo_source import YahooDataSource
 except Exception:
     # Provide lightweight fallbacks so tests can patch these attributes even if the
     # concrete implementations are not importable in the current environment.
@@ -32,6 +33,7 @@ except Exception:
     class LocalDataSource:  # pragma: no cover - fallback for tests
         def __init__(self, *args, **kwargs):
             raise RuntimeError("LocalDataSource is not available in this environment")
+
 
 logger = logging.getLogger(__name__)
 
@@ -69,7 +71,12 @@ class PriceDataService:
                 # Cache it on this module for easier patching in tests
                 setattr(sys.modules[__name__], symbol, factory)
             except Exception as exc:  # pragma: no cover - environment-dependent
-                logger.warning("Failed to import data source %s from %s: %s", name, module_name, exc)
+                logger.warning(
+                    "Failed to import data source %s from %s: %s",
+                    name,
+                    module_name,
+                    exc,
+                )
                 raise
 
         try:

@@ -2,21 +2,14 @@
 
 from typing import Any
 
-from models.portfolio import OrderType, PositionSide, TradeStatus
-from sqlalchemy import (
-    Column,
-    DateTime,
-    ForeignKey,
-    Integer,
-    Numeric,
-    String,
-)
-from sqlalchemy import (
-    Enum as SQLEnum,
-)
+from sqlalchemy import Column, DateTime
+from sqlalchemy import Enum as SQLEnum
+from sqlalchemy import ForeignKey, Integer, Numeric, String
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
+
+from models.portfolio import OrderType, PositionSide, TradeStatus
 
 Base: Any = declarative_base()
 
@@ -35,18 +28,26 @@ class PortfolioDB(Base):
     currency = Column(String, default="USD")
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(
-        DateTime(timezone=True), server_default=func.now(), onupdate=func.now(),
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
     )
 
     # Relationships
     positions = relationship(
-        "PositionDB", back_populates="portfolio", cascade="all, delete-orphan",
+        "PositionDB",
+        back_populates="portfolio",
+        cascade="all, delete-orphan",
     )
     trades = relationship(
-        "TradeDB", back_populates="portfolio", cascade="all, delete-orphan",
+        "TradeDB",
+        back_populates="portfolio",
+        cascade="all, delete-orphan",
     )
     history = relationship(
-        "PortfolioHistoryDB", back_populates="portfolio", cascade="all, delete-orphan",
+        "PortfolioHistoryDB",
+        back_populates="portfolio",
+        cascade="all, delete-orphan",
     )
 
 
@@ -66,7 +67,9 @@ class PositionDB(Base):
     unrealized_pnl_pct = Column(Numeric(precision=10, scale=4), nullable=True)
     opened_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(
-        DateTime(timezone=True), server_default=func.now(), onupdate=func.now(),
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
     )
 
     # Relationships

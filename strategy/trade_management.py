@@ -66,19 +66,23 @@ def apply_position_management(
     tp_offset = take_profit_multiple * stop_offset
 
     working["stop_loss_price"] = working[price_column] - stop_offset.where(
-        direction >= 0, -stop_offset,
+        direction >= 0,
+        -stop_offset,
     )
     working["take_profit_price"] = working[price_column] + tp_offset.where(
-        direction >= 0, -tp_offset,
+        direction >= 0,
+        -tp_offset,
     )
 
     peak_equity = working["equity"].cummax()
     working["drawdown_pct"] = (working["equity"] - peak_equity) / peak_equity.replace(
-        0, pd.NA,
+        0,
+        pd.NA,
     )
     working["halt_trading"] = working["drawdown_pct"] <= -max_drawdown_pct
     working["risk_adjusted_signal"] = working["signal"].where(
-        ~working["halt_trading"], 0,
+        ~working["halt_trading"],
+        0,
     )
 
     return working

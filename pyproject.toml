@@ -51,6 +51,15 @@ include = [
   "trading_backtester*",
 ]
 
+[tool.black]
+line-length = 88
+target-version = ["py310"]
+
+[tool.isort]
+profile = "black"
+line_length = 88
+skip_gitignore = true
+
 [project.optional-dependencies]
 # Developer dependency group for local development and checks
 dev = [

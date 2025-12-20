@@ -42,7 +42,9 @@ def _check_nulls(df: pd.DataFrame, symbol: str) -> List[str]:
     null_counts = df[cols].isna().sum()
     for col, count in null_counts[null_counts > 0].items():
         pct = count / len(df) * 100
-        warnings.append(f"{symbol}: Column '{col}' has {count} null values ({pct:.1f}%)")
+        warnings.append(
+            f"{symbol}: Column '{col}' has {count} null values ({pct:.1f}%)"
+        )
     return warnings
 
 
@@ -52,7 +54,9 @@ def _check_ohlc_relationships(df: pd.DataFrame, symbol: str) -> Tuple[bool, List
 
     high_lt_low = (df["high"] < df["low"]).sum()
     if high_lt_low:
-        warnings.append(f"{symbol}: {high_lt_low} rows where high < low (data corruption)")
+        warnings.append(
+            f"{symbol}: {high_lt_low} rows where high < low (data corruption)"
+        )
         is_valid = False
 
     # Non-fatal anomalies
@@ -77,7 +81,9 @@ def _check_prices_and_volume(df: pd.DataFrame, symbol: str) -> Tuple[bool, List[
     if any(c in df.columns for c in ["open", "high", "low", "close"]):
         negative_prices = (df[["open", "high", "low", "close"]] < 0).any(axis=1).sum()
         if negative_prices:
-            warnings.append(f"{symbol}: {negative_prices} rows with negative prices (data corruption)")
+            warnings.append(
+                f"{symbol}: {negative_prices} rows with negative prices (data corruption)"
+            )
             is_valid = False
 
         zero_prices = (df[["open", "high", "low", "close"]] == 0).any(axis=1).sum()
@@ -104,7 +110,9 @@ def _check_duplicates_and_gaps(df: pd.DataFrame, symbol: str) -> List[str]:
             date_diffs = df.index.to_series().diff()
             max_gap = date_diffs.max()
             if max_gap and max_gap > pd.Timedelta(days=30):
-                warnings.append(f"{symbol}: Maximum gap in data is {getattr(max_gap, 'days', max_gap)} days")
+                warnings.append(
+                    f"{symbol}: Maximum gap in data is {getattr(max_gap, 'days', max_gap)} days"
+                )
 
     return warnings
 
@@ -124,7 +132,9 @@ def _check_extreme_returns(df: pd.DataFrame, symbol: str) -> List[str]:
     return warnings
 
 
-def validate_price_data(df: pd.DataFrame, symbol: str = "Unknown") -> Tuple[bool, List[str]]:
+def validate_price_data(
+    df: pd.DataFrame, symbol: str = "Unknown"
+) -> Tuple[bool, List[str]]:
     """Validate price data and return (is_valid, warnings).
 
     This function inspects an OHLCV DataFrame for common issues
@@ -200,7 +210,12 @@ def clean_price_data(df: pd.DataFrame, symbol: str = "Unknown") -> pd.DataFrame:
 
     # Remove non-positive prices
     before = len(df_clean)
-    df_clean = df_clean[(df_clean["open"] > 0) & (df_clean["high"] > 0) & (df_clean["low"] > 0) & (df_clean["close"] > 0)]
+    df_clean = df_clean[
+        (df_clean["open"] > 0)
+        & (df_clean["high"] > 0)
+        & (df_clean["low"] > 0)
+        & (df_clean["close"] > 0)
+    ]
     removed = before - len(df_clean)
     if removed:
         logger.warning("%s: Removed %d rows with non-positive prices", symbol, removed)

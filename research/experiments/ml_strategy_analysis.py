@@ -37,11 +37,14 @@ def _load_numeric_features(csv_path: str) -> tuple[pd.DataFrame, pd.Series]:
 
 
 def _print_feature_importance(
-    features: Iterable[str], importances: Iterable[float],
+    features: Iterable[str],
+    importances: Iterable[float],
 ) -> None:
     print("Feature importances:")
     for name, importance in sorted(
-        zip(features, importances), key=lambda pair: pair[1], reverse=True,
+        zip(features, importances),
+        key=lambda pair: pair[1],
+        reverse=True,
     ):
         print(f"  {name}: {importance:.4f}")
 
@@ -54,7 +57,10 @@ def train_performance_model(csv_path: str):
     X, y = _load_numeric_features(csv_path)
 
     X_train, X_test, y_train, y_test = train_test_split(
-        X, y, test_size=0.25, random_state=42,
+        X,
+        y,
+        test_size=0.25,
+        random_state=42,
     )
     model = RandomForestRegressor(n_estimators=200, random_state=42, n_jobs=-1)
     model.fit(X_train, y_train)

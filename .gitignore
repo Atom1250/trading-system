@@ -33,7 +33,6 @@ Thumbs.db
 .vscode/
 
 config/Credentials.json
-<<<<<<< HEAD
 
-=======
->>>>>>> 09742ae (updating gitignore)
+# Virtualenv created by tooling
+.venv/

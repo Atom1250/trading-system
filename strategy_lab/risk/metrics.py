@@ -16,7 +16,9 @@ class RiskMetrics:
 
     @staticmethod
     def sharpe_ratio(
-        returns: pd.Series, risk_free_rate: float = 0.0, periods_per_year: int = 252,
+        returns: pd.Series,
+        risk_free_rate: float = 0.0,
+        periods_per_year: int = 252,
     ) -> float:
         """Calculate Sharpe ratio.
 
@@ -36,7 +38,9 @@ class RiskMetrics:
 
     @staticmethod
     def sortino_ratio(
-        returns: pd.Series, risk_free_rate: float = 0.0, periods_per_year: int = 252,
+        returns: pd.Series,
+        risk_free_rate: float = 0.0,
+        periods_per_year: int = 252,
     ) -> float:
         """Calculate Sortino ratio.
 
@@ -139,7 +143,9 @@ class RiskMetrics:
 
     @staticmethod
     def downside_deviation(
-        returns: pd.Series, target_return: float = 0.0, periods_per_year: int = 252,
+        returns: pd.Series,
+        target_return: float = 0.0,
+        periods_per_year: int = 252,
     ) -> float:
         """Calculate downside deviation.
 
@@ -157,7 +163,9 @@ class RiskMetrics:
 
     @staticmethod
     def calculate_all(
-        returns: pd.Series, risk_free_rate: float = 0.0, periods_per_year: int = 252,
+        returns: pd.Series,
+        risk_free_rate: float = 0.0,
+        periods_per_year: int = 252,
     ) -> dict:
         """Calculate all risk metrics.
 
@@ -172,10 +180,14 @@ class RiskMetrics:
         """
         return {
             "sharpe_ratio": RiskMetrics.sharpe_ratio(
-                returns, risk_free_rate, periods_per_year,
+                returns,
+                risk_free_rate,
+                periods_per_year,
             ),
             "sortino_ratio": RiskMetrics.sortino_ratio(
-                returns, risk_free_rate, periods_per_year,
+                returns,
+                risk_free_rate,
+                periods_per_year,
             ),
             "max_drawdown": RiskMetrics.max_drawdown(returns),
             "calmar_ratio": RiskMetrics.calmar_ratio(returns, periods_per_year),
@@ -183,7 +195,9 @@ class RiskMetrics:
             "cvar_95": RiskMetrics.conditional_var(returns, 0.95),
             "volatility": RiskMetrics.volatility(returns, periods_per_year),
             "downside_deviation": RiskMetrics.downside_deviation(
-                returns, 0.0, periods_per_year,
+                returns,
+                0.0,
+                periods_per_year,
             ),
             "total_return": (1 + returns).prod() - 1,
             "mean_return": returns.mean() * periods_per_year,

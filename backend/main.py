@@ -26,10 +26,14 @@ app.include_router(strategies.router, prefix="/api/v1/strategies", tags=["strate
 app.include_router(signals.router, prefix="/api/v1/signals", tags=["signals"])
 app.include_router(ai.router, prefix="/api/v1/ai", tags=["ai"])
 app.include_router(
-    integration.router, prefix="/api/v1/integration", tags=["integration"],
+    integration.router,
+    prefix="/api/v1/integration",
+    tags=["integration"],
 )
 app.include_router(
-    optimization.router, prefix="/api/v1/optimization", tags=["optimization"],
+    optimization.router,
+    prefix="/api/v1/optimization",
+    tags=["optimization"],
 )
 
 
