@@ -8,8 +8,14 @@ from sqlalchemy import desc
 from sqlalchemy.orm import Session
 
 from db.models import PortfolioDB, PortfolioHistoryDB, PositionDB, TradeDB
-from models.portfolio import (Portfolio, PortfolioCreate, PortfolioHistory,
-                              PortfolioMetrics, Position, Trade)
+from models.portfolio import (
+    Portfolio,
+    PortfolioCreate,
+    PortfolioHistory,
+    PortfolioMetrics,
+    Position,
+    Trade,
+)
 
 
 def create_portfolio(db: Session, portfolio: PortfolioCreate) -> Portfolio:

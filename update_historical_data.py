@@ -1,11 +1,18 @@
 import logging
 from pathlib import Path
 
-from config.settings import (DEFAULT_PRICE_DATA_SOURCE, UNIVERSE_DIR,
-                             PriceDataSource, ensure_data_directories)
-from repository.prices_repository import (append_new_rows,
-                                          fetch_and_cache_prices,
-                                          load_local_prices, price_file_path)
+from config.settings import (
+    DEFAULT_PRICE_DATA_SOURCE,
+    UNIVERSE_DIR,
+    PriceDataSource,
+    ensure_data_directories,
+)
+from repository.prices_repository import (
+    append_new_rows,
+    fetch_and_cache_prices,
+    load_local_prices,
+    price_file_path,
+)
 
 logger = logging.getLogger(__name__)
 

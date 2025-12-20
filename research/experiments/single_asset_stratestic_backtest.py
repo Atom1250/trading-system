@@ -6,10 +6,8 @@ from typing import Any
 
 from config import settings
 from ingestion.fmp_client import FMPClient
-from research.experiments.stratestic_adapter import \
-    dataframe_to_stratestic_timeseries
-from research.strategies.ma_crossover_stratestic import \
-    build_ma_crossover_strategy
+from research.experiments.stratestic_adapter import dataframe_to_stratestic_timeseries
+from research.strategies.ma_crossover_stratestic import build_ma_crossover_strategy
 
 
 def _require_api_key() -> str:

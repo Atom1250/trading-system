@@ -2,8 +2,7 @@
 
 from fastapi import APIRouter, HTTPException, Query
 
-from models.ai import (FeatureImportance, ModelExplanation, RiskAssessment,
-                       RiskMetrics)
+from models.ai import FeatureImportance, ModelExplanation, RiskAssessment, RiskMetrics
 from services.ai.feature_service import feature_service
 from services.ai.risk_service import risk_service
 

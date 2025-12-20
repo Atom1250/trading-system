@@ -9,8 +9,9 @@ from typing import Any, Optional, Tuple
 import optuna
 import pandas as pd
 
-from research.experiments.single_asset_stratestic_backtest import \
-    run_stratestic_backtest_for_symbol
+from research.experiments.single_asset_stratestic_backtest import (
+    run_stratestic_backtest_for_symbol,
+)
 
 
 def _risk_adjusted_score(metrics: dict[str, Any]) -> float:

@@ -1,7 +1,6 @@
 """FastAPI application entry point."""
 
-from api.v1 import (ai, data, integration, optimization, portfolios, signals,
-                    strategies)
+from api.v1 import ai, data, integration, optimization, portfolios, signals, strategies
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
