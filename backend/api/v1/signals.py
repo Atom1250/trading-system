@@ -2,10 +2,15 @@
 
 from fastapi import APIRouter, HTTPException, Query
 
-from models.signals import (AggregatedSignals, FundamentalMetric,
-                            FundamentalSignals, SentimentScore,
-                            SentimentSignals, TechnicalIndicator,
-                            TechnicalSignals)
+from models.signals import (
+    AggregatedSignals,
+    FundamentalMetric,
+    FundamentalSignals,
+    SentimentScore,
+    SentimentSignals,
+    TechnicalIndicator,
+    TechnicalSignals,
+)
 from services.analytics.aggregator import signal_aggregator
 from services.analytics.fundamental_service import fundamental_service
 from services.analytics.sentiment_service import sentiment_service

@@ -9,15 +9,18 @@ from typing import Any, Optional, Tuple, Union
 import pandas as pd
 import yaml
 
-from config.settings import (DEFAULT_PRICE_DATA_SOURCE, PriceDataSource,
-                             ensure_data_directories, setup_logging)
-from indicators.technicals import \
-    sma  # assumes sma(df, window) -> pandas.Series
+from config.settings import (
+    DEFAULT_PRICE_DATA_SOURCE,
+    PriceDataSource,
+    ensure_data_directories,
+    setup_logging,
+)
+from indicators.technicals import sma  # assumes sma(df, window) -> pandas.Series
 from repository.fundamentals_repository import get_fundamentals
 from repository.prices_repository import get_prices_for_backtest
-from research.experiments.optuna_ma_optimization import \
-    optimize_ma_strategy_for_symbol
+from research.experiments.optuna_ma_optimization import optimize_ma_strategy_for_symbol
 from strategy_lab.backtest.engine import StrategyBacktestEngine
+
 # Strategy Lab Imports
 from strategy_lab.config import RiskConfig, StrategyConfig
 from strategy_lab.data.providers import YFinanceHistoricalProvider

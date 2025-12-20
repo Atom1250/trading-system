@@ -7,13 +7,22 @@ with RiskConfig and enforces constraints.
 from decimal import Decimal
 from typing import Optional
 
-from strategy_lab.config import (CapitalAllocationMode, EntryMode, RiskConfig,
-                                 RiskConstraintConfig)
-from strategy_lab.risk.constraints import (PortfolioConstraint,
-                                           PositionConstraint,
-                                           RiskLimitConstraint)
-from strategy_lab.risk.portfolio_state import (PortfolioState, PositionSide,
-                                               PositionState)
+from strategy_lab.config import (
+    CapitalAllocationMode,
+    EntryMode,
+    RiskConfig,
+    RiskConstraintConfig,
+)
+from strategy_lab.risk.constraints import (
+    PortfolioConstraint,
+    PositionConstraint,
+    RiskLimitConstraint,
+)
+from strategy_lab.risk.portfolio_state import (
+    PortfolioState,
+    PositionSide,
+    PositionState,
+)
 
 
 class RiskViolation(Exception):

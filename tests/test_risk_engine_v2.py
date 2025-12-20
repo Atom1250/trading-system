@@ -8,8 +8,11 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from strategy_lab.config import CapitalAllocationMode, RiskConfig
 from strategy_lab.risk.engine import RiskEngine, RiskViolation
-from strategy_lab.risk.portfolio_state import (PortfolioState, PositionSide,
-                                               PositionState)
+from strategy_lab.risk.portfolio_state import (
+    PortfolioState,
+    PositionSide,
+    PositionState,
+)
 
 
 class TestRiskEngine(unittest.TestCase):

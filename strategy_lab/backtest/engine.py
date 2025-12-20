@@ -20,8 +20,11 @@ from strategy_lab.backtest.results import BacktestResults
 from strategy_lab.data.base import HistoricalDataProvider, MarketDataSlice
 from strategy_lab.factors.base import FactorRegistry
 from strategy_lab.risk.engine import RiskEngine, RiskViolation
-from strategy_lab.risk.portfolio_state import (PortfolioState, PositionSide,
-                                               PositionState)
+from strategy_lab.risk.portfolio_state import (
+    PortfolioState,
+    PositionSide,
+    PositionState,
+)
 from strategy_lab.sentiment.pipeline import SentimentPipeline
 from strategy_lab.strategies.base import Strategy
 

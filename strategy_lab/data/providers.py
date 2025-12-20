@@ -14,8 +14,12 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../.
 
 from config.settings import DEFAULT_PRICE_DATA_SOURCE, PriceDataSource
 from repository.prices_repository import get_prices_for_backtest
-from strategy_lab.data.base import (DataProvider, HistoricalDataProvider,
-                                    MarketDataSlice, OHLCVData)
+from strategy_lab.data.base import (
+    DataProvider,
+    HistoricalDataProvider,
+    MarketDataSlice,
+    OHLCVData,
+)
 
 
 class TradingSystemDataProvider(DataProvider):

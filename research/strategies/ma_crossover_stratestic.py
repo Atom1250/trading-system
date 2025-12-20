@@ -14,8 +14,7 @@ from typing import TYPE_CHECKING
 
 import pandas as pd
 
-from research.experiments.stratestic_adapter import \
-    dataframe_to_stratestic_timeseries
+from research.experiments.stratestic_adapter import dataframe_to_stratestic_timeseries
 
 if TYPE_CHECKING:  # pragma: no cover - typing-only import
     from stratestic.data import PriceSeries

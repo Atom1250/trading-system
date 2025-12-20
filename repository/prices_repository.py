@@ -10,9 +10,13 @@ import pandas as pd
 from dateutil import parser
 
 from config import settings
-from config.settings import (DEFAULT_PRICE_DATA_SOURCE, KAGGLE_DB_PATH,
-                             PRICE_DATA_DIR, PriceDataSource,
-                             ensure_data_directories)
+from config.settings import (
+    DEFAULT_PRICE_DATA_SOURCE,
+    KAGGLE_DB_PATH,
+    PRICE_DATA_DIR,
+    PriceDataSource,
+    ensure_data_directories,
+)
 from ingestion.fmp_client import FMPClient
 from ingestion.yahoo_finance_client import YahooFinanceClient
 from utils.data_validation import clean_price_data, validate_price_data

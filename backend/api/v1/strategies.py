@@ -2,8 +2,12 @@
 
 from fastapi import APIRouter, HTTPException
 
-from models.strategy import (BacktestMetrics, BacktestRequest, BacktestResult,
-                             StrategyInfo)
+from models.strategy import (
+    BacktestMetrics,
+    BacktestRequest,
+    BacktestResult,
+    StrategyInfo,
+)
 from services.strategy.backtest_service import backtest_service
 from services.strategy.registry import registry
 

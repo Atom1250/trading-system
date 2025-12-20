@@ -11,8 +11,7 @@ from typing import Any, Optional
 
 from strategy_lab.backtest.engine import StrategyBacktestEngine
 from strategy_lab.backtest.results import BacktestResults
-from strategy_lab.config import (OptimizationConfig, RiskConstraintConfig,
-                                 StrategyConfig)
+from strategy_lab.config import OptimizationConfig, RiskConstraintConfig, StrategyConfig
 from strategy_lab.optimization.parameters import ParameterSpace
 from strategy_lab.strategies.base import Strategy
 
