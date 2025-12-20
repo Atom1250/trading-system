@@ -11,7 +11,8 @@ from typing import Any, Optional
 
 from strategy_lab.backtest.engine import StrategyBacktestEngine
 from strategy_lab.backtest.results import BacktestResults
-from strategy_lab.config import OptimizationConfig, RiskConstraintConfig, StrategyConfig
+from strategy_lab.config import (OptimizationConfig, RiskConstraintConfig,
+                                 StrategyConfig)
 from strategy_lab.optimization.parameters import ParameterSpace
 from strategy_lab.strategies.base import Strategy
 
@@ -41,7 +42,9 @@ class MonteCarloOptimizer:
     """
 
     def __init__(
-        self, engine: StrategyBacktestEngine, optimization_config: OptimizationConfig,
+        self,
+        engine: StrategyBacktestEngine,
+        optimization_config: OptimizationConfig,
     ):
         """Initialize optimizer.
 
@@ -120,7 +123,8 @@ class MonteCarloOptimizer:
 
                 # 5. Check Constraints (Validation)
                 is_valid = self._check_constraints(
-                    metrics, base_strategy_config.risk_constraints,
+                    metrics,
+                    base_strategy_config.risk_constraints,
                 )
                 # Also check risk limits directly if they are in metrics
                 if (
@@ -150,7 +154,9 @@ class MonteCarloOptimizer:
         return results
 
     def _check_constraints(
-        self, metrics: dict[str, Any], constraints: RiskConstraintConfig,
+        self,
+        metrics: dict[str, Any],
+        constraints: RiskConstraintConfig,
     ) -> bool:
         """Check if metrics satisfy risk constraints.
 

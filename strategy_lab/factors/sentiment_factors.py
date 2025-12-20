@@ -4,9 +4,9 @@ This module provides sentiment factor implementations and integration
 points for sentiment analysis pipelines.
 """
 
+from typing import Optional
 
 import pandas as pd
-from typing import Optional
 
 from strategy_lab.factors.base import Factor, FactorResult
 
@@ -37,7 +37,9 @@ class SentimentFactor(Factor):
         sentiment = pd.Series(0.0, index=data.index)
 
         return FactorResult(
-            name=self.name, values=sentiment, metadata={"type": "placeholder"},
+            name=self.name,
+            values=sentiment,
+            metadata={"type": "placeholder"},
         )
 
 

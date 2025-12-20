@@ -6,8 +6,10 @@ from typing import Any
 
 from config import settings
 from ingestion.fmp_client import FMPClient
-from research.experiments.stratestic_adapter import dataframe_to_stratestic_timeseries
-from research.strategies.ma_crossover_stratestic import build_ma_crossover_strategy
+from research.experiments.stratestic_adapter import \
+    dataframe_to_stratestic_timeseries
+from research.strategies.ma_crossover_stratestic import \
+    build_ma_crossover_strategy
 
 
 def _require_api_key() -> str:
@@ -37,7 +39,8 @@ def run_stratestic_backtest_for_symbol(
 
     price_series = dataframe_to_stratestic_timeseries(raw_data)
     strategy = build_ma_crossover_strategy(
-        short_window=short_window, long_window=long_window,
+        short_window=short_window,
+        long_window=long_window,
     )
 
     from stratestic.execution import BacktestEngine

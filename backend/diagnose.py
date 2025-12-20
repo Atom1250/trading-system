@@ -1,6 +1,6 @@
+import logging
 import os
 import sys
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -105,10 +105,9 @@ try:
     # Minimal backtesting library test
     print("\n--- Minimal Backtesting Library Test ---")
     try:
+        from backtesting import Backtest, Strategy
         from backtesting.lib import crossover
         from backtesting.test import GOOG, SMA
-
-        from backtesting import Backtest, Strategy
 
         class SmaCross(Strategy):
             def init(self):
@@ -139,7 +138,9 @@ try:
     from services.integration.google_sheets_service import GoogleSheetsService
 
     gs = GoogleSheetsService()
-    logger.info("  GoogleSheetsService initialized. Credentials path: %s", gs.credentials_path)
+    logger.info(
+        "  GoogleSheetsService initialized. Credentials path: %s", gs.credentials_path
+    )
     logger.info("  Connected: %s", gs.is_connected())
 
     if not gs.is_connected():

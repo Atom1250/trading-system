@@ -8,11 +8,8 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from strategy_lab.config import CapitalAllocationMode, RiskConfig
 from strategy_lab.risk.engine import RiskEngine, RiskViolation
-from strategy_lab.risk.portfolio_state import (
-    PortfolioState,
-    PositionSide,
-    PositionState,
-)
+from strategy_lab.risk.portfolio_state import (PortfolioState, PositionSide,
+                                               PositionState)
 
 
 class TestRiskEngine(unittest.TestCase):
@@ -28,7 +25,8 @@ class TestRiskEngine(unittest.TestCase):
         self.engine = RiskEngine(risk_config=self.risk_config)
 
         self.portfolio = PortfolioState(
-            initial_equity=Decimal(100000), current_equity=Decimal(100000),
+            initial_equity=Decimal(100000),
+            current_equity=Decimal(100000),
         )
 
     def test_position_sizing_fixed(self):
@@ -38,7 +36,9 @@ class TestRiskEngine(unittest.TestCase):
         # Size = 1000 / 20 = 50 units
 
         size = self.engine._calc_position_size(
-            price=100.0, atr=10.0, portfolio=self.portfolio,
+            price=100.0,
+            atr=10.0,
+            portfolio=self.portfolio,
         )
         self.assertEqual(size, Decimal(50))
 
@@ -56,7 +56,9 @@ class TestRiskEngine(unittest.TestCase):
         # Size = 1500 / 20 = 75
 
         size = self.engine._calc_position_size(
-            price=100.0, atr=10.0, portfolio=self.portfolio,
+            price=100.0,
+            atr=10.0,
+            portfolio=self.portfolio,
         )
         self.assertEqual(size, Decimal(75))
 

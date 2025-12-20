@@ -4,6 +4,7 @@ Some tests run with the test directory as sys.path[0], which can prevent
 top-level shim packages from being importable. Add the project root to
 sys.path at collection time so `import services` resolves correctly.
 """
+
 import os
 import sys
 

@@ -9,18 +9,15 @@ from typing import Any, Optional, Tuple, Union
 import pandas as pd
 import yaml
 
-from config.settings import (
-    DEFAULT_PRICE_DATA_SOURCE,
-    PriceDataSource,
-    ensure_data_directories,
-    setup_logging,
-)
-from indicators.technicals import sma  # assumes sma(df, window) -> pandas.Series
+from config.settings import (DEFAULT_PRICE_DATA_SOURCE, PriceDataSource,
+                             ensure_data_directories, setup_logging)
+from indicators.technicals import \
+    sma  # assumes sma(df, window) -> pandas.Series
 from repository.fundamentals_repository import get_fundamentals
 from repository.prices_repository import get_prices_for_backtest
-from research.experiments.optuna_ma_optimization import optimize_ma_strategy_for_symbol
+from research.experiments.optuna_ma_optimization import \
+    optimize_ma_strategy_for_symbol
 from strategy_lab.backtest.engine import StrategyBacktestEngine
-
 # Strategy Lab Imports
 from strategy_lab.config import RiskConfig, StrategyConfig
 from strategy_lab.data.providers import YFinanceHistoricalProvider
@@ -55,7 +52,8 @@ def load_strategy_config(config_path: str = STRATEGY_CONFIG_PATH) -> dict[str, A
 
 
 def _default_windows(
-    config: dict[str, Any], strategy_name: Optional[str],
+    config: dict[str, Any],
+    strategy_name: Optional[str],
 ) -> Tuple[Optional[int], Optional[int]]:
     """Return default short/long windows from the strategy config if present."""
     strategies = config.get("strategies", {})
@@ -67,7 +65,9 @@ def _default_windows(
     return params.get("short_window"), params.get("long_window")
 
 
-def _coerce_data_source(value: Optional[Union[str, PriceDataSource]]) -> PriceDataSource:
+def _coerce_data_source(
+    value: Optional[Union[str, PriceDataSource]]
+) -> PriceDataSource:
     if value is None:
         return DEFAULT_PRICE_DATA_SOURCE
     if isinstance(value, PriceDataSource):
@@ -84,7 +84,8 @@ def _coerce_data_source(value: Optional[Union[str, PriceDataSource]]) -> PriceDa
 def parse_args(strategy_config: dict[str, Any]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Run trading strategy backtests")
     parser.add_argument(
-        "--symbol", help="Symbol or comma-separated symbols to backtest",
+        "--symbol",
+        help="Symbol or comma-separated symbols to backtest",
     )
     parser.add_argument(
         "--short-window",
@@ -93,10 +94,14 @@ def parse_args(strategy_config: dict[str, Any]) -> argparse.Namespace:
         help="Short moving average window",
     )
     parser.add_argument(
-        "--long-window", type=int, dest="long_window", help="Long moving average window",
+        "--long-window",
+        type=int,
+        dest="long_window",
+        help="Long moving average window",
     )
     parser.add_argument(
-        "--strategy", help="Strategy name defined in config/strategies.yaml",
+        "--strategy",
+        help="Strategy name defined in config/strategies.yaml",
     )
     parser.add_argument(
         "--force-refresh",
@@ -121,10 +126,12 @@ def parse_args(strategy_config: dict[str, Any]) -> argparse.Namespace:
     )
 
     defaults = _default_windows(
-        strategy_config, strategy_config.get("default_strategy"),
+        strategy_config,
+        strategy_config.get("default_strategy"),
     )
     parser.set_defaults(
-        default_short_window=defaults[0], default_long_window=defaults[1],
+        default_short_window=defaults[0],
+        default_long_window=defaults[1],
     )
 
     return parser.parse_args()
@@ -173,7 +180,9 @@ def build_strategy(
         strategy_class = getattr(module, class_name)
     except AttributeError:
         logger.error(
-            "Strategy class %s not found in module %s", class_name, module_name,
+            "Strategy class %s not found in module %s",
+            class_name,
+            module_name,
         )
         raise
 
@@ -191,9 +200,13 @@ def build_strategy(
     if "fundamentals" in sig.parameters or any(
         p.kind == p.VAR_KEYWORD for p in sig.parameters.values()
     ):
-        return strategy_class(
-            **valid_params, fundamentals=fundamentals,
-        ), chosen_strategy
+        return (
+            strategy_class(
+                **valid_params,
+                fundamentals=fundamentals,
+            ),
+            chosen_strategy,
+        )
 
     return strategy_class(**valid_params), chosen_strategy
 
@@ -274,7 +287,9 @@ def run_backtest(
 
     try:
         strategy, active_strategy_name = build_strategy(
-            strategy_name, override_params=override_params, fundamentals=fundamentals,
+            strategy_name,
+            override_params=override_params,
+            fundamentals=fundamentals,
         )
     except Exception as exc:
         logger.error("Failed to load strategy: %s", exc)
@@ -366,14 +381,19 @@ def _run_optuna_mode() -> None:
         num_trials = 50
 
     logger.info(
-        "Starting Optuna optimization for %s with %s trials...", symbol, num_trials,
+        "Starting Optuna optimization for %s with %s trials...",
+        symbol,
+        num_trials,
     )
 
     try:
         best_params, best_value = optimize_ma_strategy_for_symbol(
-            symbol, n_trials=num_trials,
+            symbol,
+            n_trials=num_trials,
         )
-    except Exception as exc:  # noqa: BLE001 - surface optimization errors to the console
+    except (
+        Exception
+    ) as exc:  # noqa: BLE001 - surface optimization errors to the console
         logger.error("Optuna optimization failed: %s", exc)
         return
 
@@ -394,7 +414,9 @@ def _run_strategy_lab_cli(symbol: str) -> None:
     # For CLI, we use defaults or simple hardcoded values for now,
     # mirroring the basic "MultiSignalRuleStrategy" setup from UI
     risk_cfg = RiskConfig(
-        max_drawdown_pct=0.20, risk_per_trade=0.01, stop_loss_atr_multiple=1.5,
+        max_drawdown_pct=0.20,
+        risk_per_trade=0.01,
+        stop_loss_atr_multiple=1.5,
     )
 
     strat_cfg = StrategyConfig(
@@ -412,7 +434,9 @@ def _run_strategy_lab_cli(symbol: str) -> None:
     provider = YFinanceHistoricalProvider(force_refresh=False)
     risk_engine = RiskEngine(risk_config=risk_cfg)
     engine = StrategyBacktestEngine(
-        data_provider=provider, risk_engine=risk_engine, factor_registry=FactorRegistry,
+        data_provider=provider,
+        risk_engine=risk_engine,
+        factor_registry=FactorRegistry,
     )
 
     # 3. Create Strategy
@@ -533,7 +557,9 @@ def main():
     default_short, default_long = args.default_short_window, args.default_long_window
 
     def _resolve_window(
-        prompt: str, provided: Optional[int], default_val: Optional[int],
+        prompt: str,
+        provided: Optional[int],
+        default_val: Optional[int],
     ) -> int:
         if provided is not None:
             return provided
@@ -636,7 +662,8 @@ def main():
             logger.info("Short window: %s, Long window: %s", short_window, long_window)
             if "cumulative_return" in results:
                 logger.info(
-                    "Cumulative return: %.2f%%", results["cumulative_return"] * 100,
+                    "Cumulative return: %.2f%%",
+                    results["cumulative_return"] * 100,
                 )
             if "max_drawdown" in results:
                 logger.info("Max drawdown: %.2f%%", results["max_drawdown"] * 100)

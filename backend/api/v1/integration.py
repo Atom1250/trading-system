@@ -1,14 +1,14 @@
 """Integration API endpoints."""
 
-
-from db.database import get_db
-from fastapi import APIRouter, Depends, HTTPException, Query, Response
-from services.integration.export_service import export_service
-from services.integration.google_sheets_service import google_sheets_service
-from sqlalchemy.orm import Session
 from typing import Optional
 
+from fastapi import APIRouter, Depends, HTTPException, Query, Response
+from sqlalchemy.orm import Session
+
+from db.database import get_db
 from services import portfolio_service
+from services.integration.export_service import export_service
+from services.integration.google_sheets_service import google_sheets_service
 
 router = APIRouter()
 
@@ -17,7 +17,8 @@ router = APIRouter()
 async def export_to_google_sheets(
     portfolio_id: int,
     spreadsheet_name: Optional[str] = Query(
-        None, description="Name of the spreadsheet",
+        None,
+        description="Name of the spreadsheet",
     ),
     db: Session = Depends(get_db),
 ):
@@ -45,12 +46,12 @@ async def export_to_google_sheets(
                     "quantity": float(p.quantity),
                     "cost_basis": float(p.entry_price * p.quantity),
                     "current_price": float(p.current_price) if p.current_price else 0,
-                    "market_value": float(p.current_price * p.quantity)
-                    if p.current_price
-                    else 0,
-                    "unrealized_pnl": float(p.unrealized_pnl)
-                    if p.unrealized_pnl
-                    else 0,
+                    "market_value": (
+                        float(p.current_price * p.quantity) if p.current_price else 0
+                    ),
+                    "unrealized_pnl": (
+                        float(p.unrealized_pnl) if p.unrealized_pnl else 0
+                    ),
                 }
                 for p in positions
             ],
@@ -70,7 +71,8 @@ async def export_to_google_sheets(
             spreadsheet_name = f"Portfolio Export - {portfolio.name}"
 
         result = google_sheets_service.export_portfolio(
-            portfolio_data, spreadsheet_name,
+            portfolio_data,
+            spreadsheet_name,
         )
         return result
 
@@ -107,12 +109,12 @@ async def export_file(
                     "quantity": float(p.quantity),
                     "cost_basis": float(p.entry_price * p.quantity),
                     "current_price": float(p.current_price) if p.current_price else 0,
-                    "market_value": float(p.current_price * p.quantity)
-                    if p.current_price
-                    else 0,
-                    "unrealized_pnl": float(p.unrealized_pnl)
-                    if p.unrealized_pnl
-                    else 0,
+                    "market_value": (
+                        float(p.current_price * p.quantity) if p.current_price else 0
+                    ),
+                    "unrealized_pnl": (
+                        float(p.unrealized_pnl) if p.unrealized_pnl else 0
+                    ),
                 }
                 for p in positions
             ],

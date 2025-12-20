@@ -51,11 +51,13 @@ class TearsheetGenerator:
 
         figs = {}
         figs["equity"] = self.plotter.plot_equity_curve(
-            returns=returns, title=f"Equity Curve: {self.results.strategy_name}",
+            returns=returns,
+            title=f"Equity Curve: {self.results.strategy_name}",
         )
 
         figs["drawdown"] = self.plotter.plot_drawdowns(
-            returns=returns, title=f"Drawdown: {self.results.strategy_name}",
+            returns=returns,
+            title=f"Drawdown: {self.results.strategy_name}",
         )
 
         figs["monthly_heatmap"] = self.plotter.plot_monthly_heatmap(returns=returns)

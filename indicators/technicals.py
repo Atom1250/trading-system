@@ -115,7 +115,10 @@ def macd(
 
 
 def bollinger_bands(
-    df: pd.DataFrame, window: int = 20, num_std: float = 2.0, column: str = "close",
+    df: pd.DataFrame,
+    window: int = 20,
+    num_std: float = 2.0,
+    column: str = "close",
 ) -> pd.DataFrame:
     """Calculate Bollinger Bands on the ``column`` price.
 

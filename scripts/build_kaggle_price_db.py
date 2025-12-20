@@ -121,7 +121,9 @@ def normalise_schema(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def write_to_sqlite(
-    df: pd.DataFrame, db_path: Path, table_name: str = TABLE_NAME,
+    df: pd.DataFrame,
+    db_path: Path,
+    table_name: str = TABLE_NAME,
 ) -> None:
     """Write the normalised DataFrame to a SQLite database."""
     db_path.parent.mkdir(parents=True, exist_ok=True)
