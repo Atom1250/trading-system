@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 from typing import Optional
 
-import logging
 import pandas as pd
 
 logger = logging.getLogger(__name__)
@@ -28,7 +28,8 @@ def _csv_path(symbol: str, outputsize: Optional[str]) -> Path:
 
 
 def load_cached_daily(
-    symbol: str, outputsize: Optional[str] = "compact",
+    symbol: str,
+    outputsize: Optional[str] = "compact",
 ) -> Optional[pd.DataFrame]:
     """Load cached daily OHLCV data for the given symbol and output size.
 
@@ -61,7 +62,9 @@ def load_cached_daily(
 
 
 def save_cached_daily(
-    symbol: str, df: pd.DataFrame, outputsize: Optional[str] = "compact",
+    symbol: str,
+    df: pd.DataFrame,
+    outputsize: Optional[str] = "compact",
 ) -> None:
     """Save the given daily OHLCV DataFrame to a local cache for the symbol/output size."""
     CACHE_DIR.mkdir(parents=True, exist_ok=True)
@@ -72,5 +75,9 @@ def save_cached_daily(
     try:
         df.to_parquet(parquet_file)
     except (OSError, ValueError) as exc:
-        logger.warning("Failed to write parquet file %s, falling back to CSV: %s", parquet_file, exc)
+        logger.warning(
+            "Failed to write parquet file %s, falling back to CSV: %s",
+            parquet_file,
+            exc,
+        )
         df.to_csv(csv_file, index_label="date")

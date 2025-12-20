@@ -5,6 +5,7 @@ from typing import Optional
 
 import pandas as pd
 from fastapi import APIRouter, HTTPException, Query
+
 from models.data import DataSourceInfo, PriceData, PriceDataResponse
 from services.data.price_service import PriceDataService
 
@@ -18,7 +19,9 @@ async def list_data_sources():
     sources = price_service.get_available_sources()
     return [
         DataSourceInfo(
-            name=source, description=f"{source.upper()} data source", available=True,
+            name=source,
+            description=f"{source.upper()} data source",
+            available=True,
         )
         for source in sources
     ]
@@ -28,7 +31,8 @@ async def list_data_sources():
 async def get_prices(
     symbol: str,
     source: Optional[str] = Query(
-        None, description="Data source (fmp, yahoo, kaggle, local)",
+        None,
+        description="Data source (fmp, yahoo, kaggle, local)",
     ),
     start_date: Optional[datetime] = Query(None, description="Start date"),
     end_date: Optional[datetime] = Query(None, description="End date"),
@@ -46,7 +50,8 @@ async def get_prices(
 
         if df.empty:
             raise HTTPException(
-                status_code=404, detail=f"No data found for symbol {symbol}",
+                status_code=404,
+                detail=f"No data found for symbol {symbol}",
             )
 
         # Convert DataFrame to list of PriceData

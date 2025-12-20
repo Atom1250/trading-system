@@ -31,8 +31,7 @@ logger = logging.getLogger(__name__)
 
 
 class FMPClient:
-    """Thin wrapper around FMP stable API endpoints for historical prices.
-    """
+    """Thin wrapper around FMP stable API endpoints for historical prices."""
 
     def __init__(
         self,

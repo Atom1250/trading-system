@@ -86,7 +86,9 @@ class PerformancePlotter:
         return fig
 
     def plot_drawdowns(
-        self, returns: pd.Series, title: str = "Drawdown",
+        self,
+        returns: pd.Series,
+        title: str = "Drawdown",
     ) -> Optional[Figure]:
         """Plot underwater drawdown chart.
 

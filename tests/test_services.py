@@ -4,6 +4,7 @@ from decimal import Decimal
 
 import pytest
 import yaml
+
 from services.analytics.aggregator import signal_aggregator
 from services.strategy.registry import StrategyRegistry
 
@@ -70,7 +71,10 @@ def test_aggregator_all_none_returns_neutral(monkeypatch):
     monkeypatch.setattr(sentiment_service, "get_sentiment", lambda *a, **k: None)
 
     res = signal_aggregator.aggregate_signals(
-        "TEST", include_technical=True, include_fundamental=True, include_sentiment=True,
+        "TEST",
+        include_technical=True,
+        include_fundamental=True,
+        include_sentiment=True,
     )
 
     assert res["combined_score"] == Decimal(50)

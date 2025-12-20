@@ -39,7 +39,8 @@ class PriceDataRequest(BaseModel):
 
     symbol: str = Field(..., description="Stock symbol")
     source: Optional[str] = Field(
-        None, description="Data source (fmp, yahoo, kaggle, local)",
+        None,
+        description="Data source (fmp, yahoo, kaggle, local)",
     )
     start_date: Optional[datetime] = Field(None, description="Start date")
     end_date: Optional[datetime] = Field(None, description="End date")

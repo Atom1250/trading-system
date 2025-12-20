@@ -37,9 +37,11 @@ def _normalize_index(df: pd.DataFrame) -> pd.DataFrame:
 
     if not isinstance(df.index, pd.DatetimeIndex):
         df.index = df.index.map(
-            lambda value: value
-            if isinstance(value, datetime.datetime)
-            else parser.parse(str(value)),
+            lambda value: (
+                value
+                if isinstance(value, datetime.datetime)
+                else parser.parse(str(value))
+            ),
         )
 
     if getattr(df.index, "tz", None) is not None:
@@ -77,8 +79,7 @@ def load_local_prices(symbol: str) -> pd.DataFrame:
 
 
 def load_kaggle_prices(symbol: str) -> pd.DataFrame:
-    """Load historical prices for a symbol from the Kaggle SQLite database.
-    """
+    """Load historical prices for a symbol from the Kaggle SQLite database."""
     if not KAGGLE_DB_PATH.exists():
         logger.warning(
             "Kaggle DB not found at %s. Run scripts/build_kaggle_price_db.py first.",
@@ -90,7 +91,11 @@ def load_kaggle_prices(symbol: str) -> pd.DataFrame:
         with sqlite3.connect(KAGGLE_DB_PATH) as conn:
             query = "SELECT date, open, high, low, close, volume FROM prices WHERE symbol = ?"
             df = pd.read_sql_query(
-                query, conn, params=(symbol,), parse_dates=["date"], index_col="date",
+                query,
+                conn,
+                params=(symbol,),
+                parse_dates=["date"],
+                index_col="date",
             )
 
         if df.empty:
@@ -116,8 +121,7 @@ def save_local_prices(symbol: str, df: pd.DataFrame) -> None:
 
 
 def append_new_rows(symbol: str, new_data: pd.DataFrame) -> None:
-    """Append new rows to an existing local CSV, avoiding duplicate dates.
-    """
+    """Append new rows to an existing local CSV, avoiding duplicate dates."""
     if new_data.empty:
         logger.info("No new price data to append for %s", symbol)
         return
@@ -141,7 +145,8 @@ def _source_to_value(data_source: Optional[Any]) -> str:
 
 
 def _resolve_source_for_symbol(
-    symbol: str, preferred_source: Optional[Any],
+    symbol: str,
+    preferred_source: Optional[Any],
 ) -> str:
     """Return a usable source name, falling back when configuration is missing.
 
@@ -161,7 +166,9 @@ def _resolve_source_for_symbol(
 
 
 def _fetch_with_fallback(
-    symbol: str, primary_source: str, fallback_source: Optional[str],
+    symbol: str,
+    primary_source: str,
+    fallback_source: Optional[str],
 ) -> pd.DataFrame:
     """Fetch prices from ``primary_source`` and optionally fall back if empty/errors."""
 
@@ -170,7 +177,10 @@ def _fetch_with_fallback(
             return _fetch_prices_from_source(symbol, source_value)
         except Exception as exc:  # noqa: BLE001 - log and allow fallback
             logger.error(
-                "Fetching %s prices from %s failed: %s", symbol, source_value, exc,
+                "Fetching %s prices from %s failed: %s",
+                symbol,
+                source_value,
+                exc,
             )
             return pd.DataFrame()
 
@@ -281,6 +291,8 @@ def get_prices_for_backtest(
         fallback_value = PriceDataSource.YAHOO_FINANCE.value
 
     logger.info(
-        "Fetching %s prices from %s for backtest (no cache).", symbol, source_value,
+        "Fetching %s prices from %s for backtest (no cache).",
+        symbol,
+        source_value,
     )
     return _fetch_with_fallback(symbol, source_value, fallback_value)

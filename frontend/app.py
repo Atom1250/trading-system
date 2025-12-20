@@ -61,7 +61,10 @@ with st.sidebar.expander("💼 Portfolio Management", expanded=False):
     new_pf_name = st.text_input("Name", key="new_pf_name")
     new_pf_desc = st.text_input("Description", key="new_pf_desc")
     new_pf_capital = st.number_input(
-        "Initial Capital", value=100000.0, step=1000.0, key="new_pf_capital",
+        "Initial Capital",
+        value=100000.0,
+        step=1000.0,
+        key="new_pf_capital",
     )
 
     if st.button("Create Portfolio"):
@@ -98,7 +101,9 @@ st.sidebar.markdown("### Date Range")
 col1, col2 = st.sidebar.columns(2)
 with col1:
     start_date = st.date_input(
-        "Start", value=datetime.now() - timedelta(days=365), max_value=datetime.now(),
+        "Start",
+        value=datetime.now() - timedelta(days=365),
+        max_value=datetime.now(),
     )
 with col2:
     end_date = st.date_input("End", value=datetime.now(), max_value=datetime.now())
@@ -329,7 +334,9 @@ with tab3:
             score = signals.get("combined_score", 50)
 
             st.metric(
-                "Combined Score", f"{score}/100", f"Recommendation: {rec.upper()}",
+                "Combined Score",
+                f"{score}/100",
+                f"Recommendation: {rec.upper()}",
             )
 
             # Individual signals
@@ -393,7 +400,8 @@ with tab3:
 
             st.metric("Signal", signals.get("signal", "N/A").upper())
             st.metric(
-                "Overall Sentiment", f"{float(signals.get('overall_sentiment', 0)):.2f}",
+                "Overall Sentiment",
+                f"{float(signals.get('overall_sentiment', 0)):.2f}",
             )
 
             st.subheader("Sources")
@@ -419,7 +427,8 @@ with tab4:
             # Get strategy details to show parameters
             if selected_strategy:
                 strategy_info = next(
-                    (s for s in strategies if s["name"] == selected_strategy), None,
+                    (s for s in strategies if s["name"] == selected_strategy),
+                    None,
                 )
                 if strategy_info:
                     st.write("**Configure Parameters:**")
@@ -456,12 +465,16 @@ with tab4:
         except Exception as e:
             st.warning(f"Failed to load strategies: {e}")
             selected_strategy = st.text_input(
-                "Strategy Name", value="moving_average_crossover",
+                "Strategy Name",
+                value="moving_average_crossover",
             )
             custom_params = {}
 
         initial_capital = st.number_input(
-            "Initial Capital", min_value=1000, value=100000, step=1000,
+            "Initial Capital",
+            min_value=1000,
+            value=100000,
+            step=1000,
         )
 
     with col2:
@@ -494,14 +507,16 @@ with tab4:
 
             with col1:
                 st.metric(
-                    "Total Return", f"{float(metrics.get('total_return_pct', 0)):.2f}%",
+                    "Total Return",
+                    f"{float(metrics.get('total_return_pct', 0)):.2f}%",
                 )
             with col2:
                 sharpe = metrics.get("sharpe_ratio")
                 st.metric("Sharpe Ratio", f"{float(sharpe):.2f}" if sharpe else "N/A")
             with col3:
                 st.metric(
-                    "Max Drawdown", f"{float(metrics.get('max_drawdown_pct', 0)):.2f}%",
+                    "Max Drawdown",
+                    f"{float(metrics.get('max_drawdown_pct', 0)):.2f}%",
                 )
             with col4:
                 win_rate = metrics.get("win_rate")
@@ -550,7 +565,8 @@ with tab4:
                                     color=[
                                         "green" if pnl > 0 else "red"
                                         for pnl in df_trades.get(
-                                            "pnl", [0] * len(df_trades),
+                                            "pnl",
+                                            [0] * len(df_trades),
                                         )
                                     ],
                                     symbol="triangle-up",
@@ -587,14 +603,17 @@ with tab5:
             strategies = api.get_strategies()
             strategy_names = [s["name"] for s in strategies]
             opt_strategy = st.selectbox(
-                "Strategy to Optimize", options=strategy_names, key="opt_strategy",
+                "Strategy to Optimize",
+                options=strategy_names,
+                key="opt_strategy",
             )
 
             # Dynamic parameter ranges based on strategy
             param_ranges = {}
             if opt_strategy:
                 strategy_info = next(
-                    (s for s in strategies if s["name"] == opt_strategy), None,
+                    (s for s in strategies if s["name"] == opt_strategy),
+                    None,
                 )
                 if strategy_info:
                     st.write("**Parameter Ranges:**")
@@ -640,7 +659,11 @@ with tab5:
     with col2:
         st.write("**Optimization Config:**")
         n_trials = st.number_input(
-            "Number of Trials", min_value=5, max_value=100, value=20, step=5,
+            "Number of Trials",
+            min_value=5,
+            max_value=100,
+            value=20,
+            step=5,
         )
         opt_metric = st.selectbox(
             "Metric to Optimize",
@@ -689,12 +712,14 @@ with tab5:
                         # Flatten params
                         df_params = pd.json_normalize(df_trials["params"])
                         df_trials = pd.concat(
-                            [df_trials.drop("params", axis=1), df_params], axis=1,
+                            [df_trials.drop("params", axis=1), df_params],
+                            axis=1,
                         )
 
                         st.dataframe(
                             df_trials.sort_values(
-                                "value", ascending=(opt_direction == "minimize"),
+                                "value",
+                                ascending=(opt_direction == "minimize"),
                             ),
                             use_container_width=True,
                         )
@@ -779,7 +804,8 @@ with tab7:
         if portfolios:
             portfolio_options = {p["name"]: p["id"] for p in portfolios}
             selected_portfolio_name = st.selectbox(
-                "Select Portfolio", options=list(portfolio_options.keys()),
+                "Select Portfolio",
+                options=list(portfolio_options.keys()),
             )
             selected_portfolio_id = portfolio_options[selected_portfolio_name]
 
@@ -796,7 +822,8 @@ with tab7:
                     try:
                         with st.spinner("Exporting..."):
                             result = api.export_to_google_sheets(
-                                selected_portfolio_id, sheet_name,
+                                selected_portfolio_id,
+                                sheet_name,
                             )
                         st.success(
                             f"Export successful! [Open Sheet]({result['spreadsheet_url']})",
@@ -812,7 +839,8 @@ with tab7:
                     try:
                         with st.spinner("Generating file..."):
                             file_content = api.download_portfolio_export(
-                                selected_portfolio_id, format_type.lower(),
+                                selected_portfolio_id,
+                                format_type.lower(),
                             )
 
                             file_name = f"portfolio_{selected_portfolio_id}.{format_type.lower()}"

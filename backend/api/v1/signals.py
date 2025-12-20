@@ -1,6 +1,7 @@
 """Signals API endpoints."""
 
 from fastapi import APIRouter, HTTPException, Query
+
 from models.signals import (
     AggregatedSignals,
     FundamentalMetric,
@@ -20,7 +21,8 @@ router = APIRouter()
 
 @router.get("/technical/{symbol}", response_model=TechnicalSignals)
 async def get_technical_signals(
-    symbol: str, data_source: str = Query("local", description="Data source"),
+    symbol: str,
+    data_source: str = Query("local", description="Data source"),
 ):
     """Get technical indicators and signals for a symbol."""
     try:
@@ -36,7 +38,8 @@ async def get_technical_signals(
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
         raise HTTPException(
-            status_code=500, detail=f"Error calculating technical signals: {e!s}",
+            status_code=500,
+            detail=f"Error calculating technical signals: {e!s}",
         )
 
 
@@ -54,7 +57,8 @@ async def get_fundamental_signals(symbol: str):
         )
     except Exception as e:
         raise HTTPException(
-            status_code=500, detail=f"Error getting fundamental signals: {e!s}",
+            status_code=500,
+            detail=f"Error getting fundamental signals: {e!s}",
         )
 
 
@@ -72,7 +76,8 @@ async def get_sentiment_signals(symbol: str):
         )
     except Exception as e:
         raise HTTPException(
-            status_code=500, detail=f"Error getting sentiment signals: {e!s}",
+            status_code=500,
+            detail=f"Error getting sentiment signals: {e!s}",
         )
 
 
@@ -135,5 +140,6 @@ async def get_aggregated_signals(
         )
     except Exception as e:
         raise HTTPException(
-            status_code=500, detail=f"Error aggregating signals: {e!s}",
+            status_code=500,
+            detail=f"Error aggregating signals: {e!s}",
         )

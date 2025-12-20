@@ -35,7 +35,9 @@ class TradingSystemDataProvider(DataProvider):
     """
 
     def __init__(
-        self, source: Optional[PriceDataSource] = None, force_refresh: bool = False,
+        self,
+        source: Optional[PriceDataSource] = None,
+        force_refresh: bool = False,
     ):
         """Initialize the trading system data provider.
 
@@ -137,7 +139,8 @@ class YahooFinanceProvider(DataProvider):
     def __init__(self, force_refresh: bool = False):
         """Initialize Yahoo Finance provider."""
         self.provider = TradingSystemDataProvider(
-            source=PriceDataSource.YAHOO_FINANCE, force_refresh=force_refresh,
+            source=PriceDataSource.YAHOO_FINANCE,
+            force_refresh=force_refresh,
         )
 
     def fetch_ohlcv(
@@ -164,7 +167,8 @@ class FMPProvider(DataProvider):
     def __init__(self, force_refresh: bool = False):
         """Initialize FMP provider."""
         self.provider = TradingSystemDataProvider(
-            source=PriceDataSource.FMP, force_refresh=force_refresh,
+            source=PriceDataSource.FMP,
+            force_refresh=force_refresh,
         )
 
     def fetch_ohlcv(
@@ -192,7 +196,10 @@ class YFinanceHistoricalProvider(HistoricalDataProvider):
         self.provider = YahooFinanceProvider(force_refresh=force_refresh)
 
     def get_history(
-        self, symbol: str, start: datetime, end: datetime,
+        self,
+        symbol: str,
+        start: datetime,
+        end: datetime,
     ) -> MarketDataSlice:
         try:
             ohlcv = self.provider.fetch_ohlcv(symbol, start_date=start, end_date=end)
@@ -214,7 +221,10 @@ class FMPHistoricalProvider(HistoricalDataProvider):
         self.provider = FMPProvider(force_refresh=force_refresh)
 
     def get_history(
-        self, symbol: str, start: datetime, end: datetime,
+        self,
+        symbol: str,
+        start: datetime,
+        end: datetime,
     ) -> MarketDataSlice:
         try:
             ohlcv = self.provider.fetch_ohlcv(symbol, start_date=start, end_date=end)

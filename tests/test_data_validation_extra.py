@@ -2,7 +2,7 @@
 
 import pandas as pd
 
-from utils.data_validation import validate_price_data, clean_price_data
+from utils.data_validation import clean_price_data, validate_price_data
 
 
 def test_extreme_returns_detected():

@@ -68,10 +68,12 @@ def _moving_average_crossover_strategy_class():
             """
             closes = prices.close
             short_ma = closes.rolling(
-                window=self.short_window, min_periods=self.short_window,
+                window=self.short_window,
+                min_periods=self.short_window,
             ).mean()
             long_ma = closes.rolling(
-                window=self.long_window, min_periods=self.long_window,
+                window=self.long_window,
+                min_periods=self.long_window,
             ).mean()
 
             cross_up = (short_ma > long_ma) & (short_ma.shift(1) <= long_ma.shift(1))

@@ -75,7 +75,9 @@ class Strategy(ABC):
 
     @abstractmethod
     def generate_signals(
-        self, data: MarketDataSlices, factor_panels: FactorPanels,
+        self,
+        data: MarketDataSlices,
+        factor_panels: FactorPanels,
     ) -> dict[str, pd.Series]:
         """Generate trading signals.
 

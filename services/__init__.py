@@ -5,6 +5,7 @@ work by adding the repository's `backend/services` directory to the
 package search path. It's a small compatibility shim until the project
 is installed as a proper package (see TODO: Add proper packaging).
 """
+
 import os
 from pathlib import Path
 

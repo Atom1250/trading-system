@@ -41,7 +41,9 @@ class StrategyRegistry:
                     "params": strategy_def.get("params", {}),
                 }
         except (OSError, yaml.YAMLError) as exc:
-            logger.exception("Error loading strategies from %s: %s", self.config_path, exc)
+            logger.exception(
+                "Error loading strategies from %s: %s", self.config_path, exc
+            )
             self._strategies = {}
             self._default_strategy = None
 
@@ -62,7 +64,9 @@ class StrategyRegistry:
             raise ValueError(f"Failed to load strategy '{name}': {e}")
 
     def create_strategy(
-        self, name: str, override_params: Optional[dict[str, Any]] = None,
+        self,
+        name: str,
+        override_params: Optional[dict[str, Any]] = None,
     ):
         """Create strategy instance with parameters."""
         if name not in self._strategies:

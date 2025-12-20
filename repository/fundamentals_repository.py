@@ -17,8 +17,7 @@ def fundamentals_file_path(symbol: str) -> Path:
 
 
 def load_local_fundamentals(symbol: str) -> dict[str, Any]:
-    """Load fundamentals for a symbol from JSON if present; return {} otherwise.
-    """
+    """Load fundamentals for a symbol from JSON if present; return {} otherwise."""
     ensure_data_directories()
     path = fundamentals_file_path(symbol)
     if not path.exists():
@@ -34,12 +33,12 @@ def load_local_fundamentals(symbol: str) -> dict[str, Any]:
 
 
 def get_fundamentals(symbol: str, use_local_repository: bool = True) -> dict[str, Any]:
-    """Retrieve fundamentals for ``symbol``. Currently supports local repository reads.
-    """
+    """Retrieve fundamentals for ``symbol``. Currently supports local repository reads."""
     if use_local_repository:
         return load_local_fundamentals(symbol)
 
     logger.info(
-        "Non-local fundamentals lookup for %s not implemented; returning empty.", symbol,
+        "Non-local fundamentals lookup for %s not implemented; returning empty.",
+        symbol,
     )
     return {}

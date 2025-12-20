@@ -71,9 +71,9 @@ class OptimizationService:
                         name,
                         float(config["min"]),
                         float(config["max"]),
-                        step=float(config.get("step", 0.1))
-                        if "step" in config
-                        else None,
+                        step=(
+                            float(config.get("step", 0.1)) if "step" in config else None
+                        ),
                     )
                 elif param_type == "categorical":
                     params[name] = trial.suggest_categorical(name, config["choices"])

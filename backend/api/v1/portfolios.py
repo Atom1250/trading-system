@@ -1,8 +1,9 @@
 """Portfolio API endpoints."""
 
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.orm import Session
 
 from db.database import get_db
-from fastapi import APIRouter, Depends, HTTPException, status
 from models.portfolio import (
     Portfolio,
     PortfolioCreate,
@@ -11,8 +12,6 @@ from models.portfolio import (
     Position,
     Trade,
 )
-from sqlalchemy.orm import Session
-
 from services import portfolio_service
 
 router = APIRouter()
@@ -26,7 +25,9 @@ async def create_portfolio(portfolio: PortfolioCreate, db: Session = Depends(get
 
 @router.get("/", response_model=list[Portfolio])
 async def list_portfolios(
-    skip: int = 0, limit: int = 100, db: Session = Depends(get_db),
+    skip: int = 0,
+    limit: int = 100,
+    db: Session = Depends(get_db),
 ):
     """List all portfolios."""
     return portfolio_service.get_portfolios(db, skip=skip, limit=limit)
@@ -52,7 +53,10 @@ async def get_portfolio_positions(portfolio_id: int, db: Session = Depends(get_d
 
 @router.get("/{portfolio_id}/trades", response_model=list[Trade])
 async def get_portfolio_trades(
-    portfolio_id: int, skip: int = 0, limit: int = 100, db: Session = Depends(get_db),
+    portfolio_id: int,
+    skip: int = 0,
+    limit: int = 100,
+    db: Session = Depends(get_db),
 ):
     """Get trade history for a portfolio."""
     return portfolio_service.get_trades(db, portfolio_id, skip=skip, limit=limit)
@@ -66,7 +70,9 @@ async def get_portfolio_metrics(portfolio_id: int, db: Session = Depends(get_db)
 
 @router.get("/{portfolio_id}/history", response_model=list[PortfolioHistory])
 async def get_portfolio_history(
-    portfolio_id: int, days: int = 30, db: Session = Depends(get_db),
+    portfolio_id: int,
+    days: int = 30,
+    db: Session = Depends(get_db),
 ):
     """Get historical values for a portfolio."""
     return portfolio_service.get_history(db, portfolio_id, days=days)
