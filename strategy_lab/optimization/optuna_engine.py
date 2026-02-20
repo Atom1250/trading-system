@@ -54,12 +54,12 @@ def optimize_lab_strategy(
         # Config
         # We need a basic RiskConfig
         risk_cfg = RiskConfig(
-            max_drawdown_pct=0.50,  # Loose for optimization unless optimized
+            max_drawdown_pct=0.50,
             risk_per_trade=0.01,
-            stop_loss_atr_multiple=full_params.get(
-                "stop_loss_atr_multiple",
-                2.0,
-            ),  # If not in params, use default
+            stop_loss_atr_multiple=full_params.get("stop_loss_atr_multiple", 2.0),
+            take_profit_atr_multiple=full_params.get("take_profit_atr_multiple", 2.0),
+            stop_loss_pct=full_params.get("stop_loss_pct"),
+            take_profit_pct=full_params.get("take_profit_pct"),
         )
 
         strat_cfg = StrategyConfig(
@@ -108,7 +108,8 @@ def optimize_lab_strategy(
             logger.exception("Trial failed for params %s: %s", full_params, exc)
             return -9999.0
 
-    study = optuna.create_study(direction="maximize")
+    pruner = optuna.pruners.MedianPruner(n_startup_trials=5, n_warmup_steps=10)
+    study = optuna.create_study(direction="maximize", pruner=pruner)
     study.optimize(objective, n_trials=n_trials)
 
     return study.best_params
