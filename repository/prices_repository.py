@@ -32,9 +32,21 @@ def price_file_path(symbol: str) -> Path:
 
 
 def _normalize_index(df: pd.DataFrame) -> pd.DataFrame:
+    """Normalize DataFrame index to UTC-aware DatetimeIndex.
+
+    All timestamps are converted to UTC to ensure consistency across
+    different data sources (FMP, Yahoo Finance, Kaggle).
+
+    Args:
+        df: DataFrame with date index (may be naive or timezone-aware)
+
+    Returns:
+        DataFrame with UTC-aware DatetimeIndex
+    """
     if df.empty:
         return df
 
+    # Convert to DatetimeIndex if not already
     if not isinstance(df.index, pd.DatetimeIndex):
         df.index = df.index.map(
             lambda value: (
@@ -44,13 +56,24 @@ def _normalize_index(df: pd.DataFrame) -> pd.DataFrame:
             ),
         )
 
-    if getattr(df.index, "tz", None) is not None:
+    # Ensure UTC timezone
+    if getattr(df.index, "tz", None) is None:
+        # Naive timestamps: assume UTC and localize
         try:
-            # If index is timezone-aware, prefer tz_convert to remove tz information.
-            df.index = df.index.tz_convert(None)
-        except Exception:
-            # Fallback for older pandas versions or unexpected index types
-            df.index = df.index.tz_localize(None)
+            df.index = df.index.tz_localize("UTC")
+        except Exception as exc:
+            logger.warning(
+                "Failed to localize naive timestamps to UTC: %s. "
+                "Timestamps may have ambiguous DST transitions.",
+                exc,
+            )
+            # Try with ambiguous='infer' for DST edge cases
+            df.index = df.index.tz_localize(
+                "UTC", ambiguous="infer", nonexistent="shift_forward"
+            )
+    else:
+        # Already timezone-aware: convert to UTC
+        df.index = df.index.tz_convert("UTC")
 
     df.sort_index(inplace=True)
     return df

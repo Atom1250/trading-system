@@ -71,13 +71,18 @@ def setup_logging(log_path: Optional[str] = None) -> None:
     os.makedirs(log_dir, exist_ok=True)
 
     resolved_log_path = log_path or os.path.join(log_dir, "trading_system.log")
-    formatter = logging.Formatter("%(asctime)s [%(levelname)s] %(message)s")
+    formatter = logging.Formatter("%(asctime)s [%(levelname)s] %(name)s: %(message)s")
 
     console_handler = logging.StreamHandler(sys.stdout)
     console_handler.setLevel(logging.INFO)
     console_handler.setFormatter(formatter)
 
-    file_handler = logging.FileHandler(resolved_log_path)
+    # Use RotatingFileHandler for log rotation (10MB max, 5 backups)
+    from logging.handlers import RotatingFileHandler
+
+    file_handler = RotatingFileHandler(
+        resolved_log_path, maxBytes=10 * 1024 * 1024, backupCount=5  # 10MB
+    )
     file_handler.setLevel(logging.INFO)
     file_handler.setFormatter(formatter)
 

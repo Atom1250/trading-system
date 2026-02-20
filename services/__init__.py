@@ -3,7 +3,8 @@
 This file makes `import services.data.price_service` and similar imports
 work by adding the repository's `backend/services` directory to the
 package search path. It's a small compatibility shim until the project
-is installed as a proper package (see TODO: Add proper packaging).
+is installed as a proper package. This shim is maintained for backward compatibility
+during the migration to the new UI architecture.
 """
 
 import os

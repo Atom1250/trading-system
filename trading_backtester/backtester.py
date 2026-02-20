@@ -126,9 +126,18 @@ class Backtester:
         signal_column: str = "signal",
         results_path: str | Path = "reports/results.csv",
         initial_cash: float = 100_000.0,
-        commission: float = 0.0,
+        commission: float = 0.001,  # 0.1% per trade (changed from 0.0)
     ) -> None:
-        """Create a Backtester with default configuration values."""
+        """Create a Backtester with default configuration values.
+
+        Args:
+            price_column: Column name for price data (default: "close")
+            signal_column: Column name for strategy signals (default: "signal")
+            results_path: Path to save backtest results CSV
+            initial_cash: Starting capital for backtest (default: $100,000)
+            commission: Commission per trade as a fraction (default: 0.001 = 0.1%)
+                       Set to 0.0 for zero-commission backtests (not realistic)
+        """
         self.price_column = price_column
         self.signal_column = signal_column
         self.results_path = Path(results_path)

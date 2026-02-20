@@ -1,7 +1,7 @@
 default_strategy: moving_average_crossover
 strategies:
   moving_average_crossover:
-    module: strategy.moving_average_crossover
+    module: strategy_lab.strategies.simple.moving_average
     class: MovingAverageCrossoverStrategy
     params:
       short_window: 20
@@ -13,7 +13,7 @@ strategies:
       take_profit_multiple: 2.0
       max_drawdown_pct: 0.2
   macd_crossover:
-    module: strategy.macd_crossover
+    module: strategy_lab.strategies.simple.macd
     class: MACDCrossoverStrategy
     params:
       fast_span: 12
@@ -26,7 +26,7 @@ strategies:
       take_profit_multiple: 2.0
       max_drawdown_pct: 0.2
   rsi_mean_reversion:
-    module: strategy.rsi_mean_reversion
+    module: strategy_lab.strategies.simple.rsi
     class: RSIMeanReversionStrategy
     params:
       period: 14

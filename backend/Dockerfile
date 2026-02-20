@@ -23,7 +23,7 @@ COPY ingestion/ ./ingestion/
 COPY repository/ ./repository/
 COPY backtesting/ ./backtesting/
 COPY indicators/ ./indicators/
-COPY strategy/ ./strategy/
+COPY strategy_lab/ ./strategy_lab/
 COPY trading_backtester/ ./trading_backtester/
 COPY utils/ ./utils/
 

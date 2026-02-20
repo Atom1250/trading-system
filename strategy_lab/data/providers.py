@@ -86,10 +86,16 @@ class TradingSystemDataProvider(DataProvider):
         # Standardize column names to lowercase
         df.columns = df.columns.str.lower()
 
-        # Filter by date range if provided
+        # Filter by date range if provided (Ensure UTC consistency)
+        from datetime import timezone
+
         if start_date is not None:
+            if start_date.tzinfo is None:
+                start_date = start_date.replace(tzinfo=timezone.utc)
             df = df[df.index >= start_date]
         if end_date is not None:
+            if end_date.tzinfo is None:
+                end_date = end_date.replace(tzinfo=timezone.utc)
             df = df[df.index <= end_date]
 
         if df.empty:

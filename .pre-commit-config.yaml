@@ -1,6 +1,11 @@
 exclude: '(^|/)\\.venv/'
 
 repos:
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.24.0
+    hooks:
+      - id: gitleaks
+        args: ["--redact", "--verbose"]
   - repo: https://github.com/charliermarsh/ruff-pre-commit
     # Use the main branch for pre-commit to avoid pinning to a tag that may not exist
     rev: main

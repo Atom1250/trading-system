@@ -49,4 +49,5 @@ yfinance
 ta
 optuna
 pytest
+pytest-cov
 kagglehub

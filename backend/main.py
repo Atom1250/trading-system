@@ -1,49 +1,64 @@
-"""FastAPI application entry point."""
+import logging
+import sys
+from pathlib import Path
 
-from api.v1 import ai, data, integration, optimization, portfolios, signals, strategies
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+# Ensure the project root is in sys.path so we can import from strategy_lab, etc.
+# This assumes backend/main.py is two levels deep from project root
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
+# Import routers (to be created)
+from backend.api.router import api_router
+
+# Setup logging
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+)
+logger = logging.getLogger(__name__)
+
 app = FastAPI(
     title="Trading System API",
-    description="Modern backend for algorithmic trading system",
+    description="Backend API for Trading Strategy Lab",
     version="2.0.0",
 )
 
-# CORS middleware
+# CORS Configuration
+# Allow requests from frontend (default port 3000)
+origins = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Include routers
-app.include_router(portfolios.router, prefix="/api/v1/portfolios", tags=["portfolios"])
-app.include_router(data.router, prefix="/api/v1/data", tags=["data"])
-app.include_router(strategies.router, prefix="/api/v1/strategies", tags=["strategies"])
-app.include_router(signals.router, prefix="/api/v1/signals", tags=["signals"])
-app.include_router(ai.router, prefix="/api/v1/ai", tags=["ai"])
-app.include_router(
-    integration.router,
-    prefix="/api/v1/integration",
-    tags=["integration"],
-)
-app.include_router(
-    optimization.router,
-    prefix="/api/v1/optimization",
-    tags=["optimization"],
-)
-
-
-@app.get("/")
-async def root():
-    """Root endpoint."""
-    return {"message": "Trading System API", "version": "1.0.0"}
+# Include API Router
+app.include_router(api_router, prefix="/api/v1")
 
 
 @app.get("/health")
-async def health():
-    """Health check endpoint."""
-    return {"status": "healthy"}
+def health_check():
+    """Simple health check endpoint."""
+    return {"status": "ok", "version": "2.0.0"}
+
+
+@app.get("/")
+def root():
+    """Root endpoint info."""
+    return {"message": "Trading System API is running. Visit /docs for Swagger UI."}
+
+
+if __name__ == "__main__":
+    import uvicorn
+
+    uvicorn.run("backend.main:app", host="0.0.0.0", port=8000, reload=True)
