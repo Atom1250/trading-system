@@ -7,8 +7,8 @@ from typing import Optional
 from sqlalchemy import desc
 from sqlalchemy.orm import Session
 
-from db.models import PortfolioDB, PortfolioHistoryDB, PositionDB, TradeDB
-from models.portfolio import (
+from backend.db.models import PortfolioDB, PortfolioHistoryDB, PositionDB, TradeDB
+from backend.models.portfolio import (
     Portfolio,
     PortfolioCreate,
     PortfolioHistory,

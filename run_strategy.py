@@ -408,7 +408,7 @@ def _run_optuna_mode() -> None:
         logger.info("  %s: %s", param, value)
 
 
-def _run_strategy_lab_cli(symbol: str) -> None:
+def _run_strategy_lab_cli(symbol: str, strategy_name: Optional[str] = None) -> None:
     """Run a Strategy Lab backtest from the CLI."""
     logger.info("=== Strategy Lab CLI ===")
     logger.info("Symbol: %s", symbol)
@@ -443,7 +443,16 @@ def _run_strategy_lab_cli(symbol: str) -> None:
     )
 
     # 3. Create Strategy
-    strategy = MultiSignalRuleStrategy(strat_cfg)
+    if strategy_name:
+        try:
+            strategy, _ = build_strategy(strategy_name)
+            logger.info("Using strategy: %s", strategy_name)
+        except Exception as exc:
+            logger.error("Failed to load strategy %s: %s", strategy_name, exc)
+            return
+    else:
+        logger.info("Using default MultiSignalRuleStrategy")
+        strategy = MultiSignalRuleStrategy(strat_cfg)
 
     # 4. Run
     # Defaulting to 1 year backtest for CLI demo
@@ -512,7 +521,7 @@ def main():
 
         symbols = [s.strip().upper() for s in raw_symbols.split(",") if s.strip()]
         for sym in symbols:
-            _run_strategy_lab_cli(sym)
+            _run_strategy_lab_cli(sym, args.strategy)
         return
 
     # Legacy / Interactive Selection logic

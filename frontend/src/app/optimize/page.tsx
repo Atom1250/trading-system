@@ -114,6 +114,10 @@ export default function OptimizationPage() {
                                 <SelectContent>
                                     <SelectItem value="MovingAverageCrossover">Moving Average Crossover</SelectItem>
                                     <SelectItem value="RSIMeanReversion">RSI Mean Reversion</SelectItem>
+                                    <SelectItem value="TrendPullback">Trend Pullback</SelectItem>
+                                    <SelectItem value="MorningStar">Morning Star</SelectItem>
+                                    <SelectItem value="ThreeWhiteSoldiers">Three White Soldiers</SelectItem>
+                                    <SelectItem value="CandleCombined">Candle Combined</SelectItem>
                                 </SelectContent>
                             </Select>
                         </div>

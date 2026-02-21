@@ -306,7 +306,7 @@ def get_prices_for_backtest(
             return df
 
         save_local_prices(symbol, df)
-        return df
+        return _normalize_index(df.copy())
 
     source_value = _resolve_source_for_symbol(symbol, data_source)
     fallback_value = None
@@ -318,4 +318,7 @@ def get_prices_for_backtest(
         symbol,
         source_value,
     )
-    return _fetch_with_fallback(symbol, source_value, fallback_value)
+    df = _fetch_with_fallback(symbol, source_value, fallback_value)
+    if df.empty:
+        return df
+    return _normalize_index(df.copy())

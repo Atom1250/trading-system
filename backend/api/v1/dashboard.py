@@ -1,11 +1,14 @@
-from fastapi import APIRouter
-from datetime import datetime
 import platform
+from datetime import datetime
+
 import psutil
+from fastapi import APIRouter
+
 from backend.storage.results_store import ResultsStore
 
 router = APIRouter()
 results_store = ResultsStore()
+
 
 @router.get("/stats")
 def get_dashboard_stats():
@@ -20,9 +23,10 @@ def get_dashboard_stats():
         "system_info": {
             "os": platform.system(),
             "cpu_usage": f"{psutil.cpu_percent()}%",
-            "memory_usage": f"{psutil.virtual_memory().percent}%"
-        }
+            "memory_usage": f"{psutil.virtual_memory().percent}%",
+        },
     }
+
 
 @router.get("/activity")
 def get_recent_activity():
@@ -31,20 +35,24 @@ def get_recent_activity():
     """
     raw = results_store.get_all_results()
     # Sort by timestamp descending and take last 10
-    sorted_results = sorted(raw, key=lambda x: x.get("timestamp", ""), reverse=True)[:10]
-    
+    sorted_results = sorted(raw, key=lambda x: x.get("timestamp", ""), reverse=True)[
+        :10
+    ]
+
     activity = []
     for r in sorted_results:
-        activity.append({
-            "id": r.get("id"),
-            "type": "backtest",
-            "strategy": r.get("strategy_name"),
-            "symbol": r.get("symbol"),
-            "status": "completed",
-            "timestamp": r.get("timestamp"),
-            "metrics": {
-                "return": f"{r.get('metrics', {}).get('total_return', 0):.1f}%",
-                "sharpe": f"{r.get('metrics', {}).get('sharpe_ratio', 0):.2f}"
+        activity.append(
+            {
+                "id": r.get("id"),
+                "type": "backtest",
+                "strategy": r.get("strategy_name"),
+                "symbol": r.get("symbol"),
+                "status": "completed",
+                "timestamp": r.get("timestamp"),
+                "metrics": {
+                    "return": f"{r.get('metrics', {}).get('total_return', 0):.1f}%",
+                    "sharpe": f"{r.get('metrics', {}).get('sharpe_ratio', 0):.2f}",
+                },
             }
-        })
+        )
     return activity

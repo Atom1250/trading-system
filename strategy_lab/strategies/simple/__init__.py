@@ -10,14 +10,20 @@ Strategies:
 - RSIMeanReversionStrategy: RSI mean reversion signals
 """
 
+from .candle_combined import CandleCombinedStrategy
 from .macd import MACDCrossoverStrategy
+from .morning_star import MorningStarStrategy
 from .moving_average import MovingAverageCrossoverStrategy
 from .rsi import RSIMeanReversionStrategy
+from .three_white_soldiers import ThreeWhiteSoldiersStrategy
 from .trend_pullback import TrendPullbackStrategy
 
 __all__ = [
-    'MovingAverageCrossoverStrategy',
-    'MACDCrossoverStrategy',
-    'RSIMeanReversionStrategy',
-    'TrendPullbackStrategy',
+    "MovingAverageCrossoverStrategy",
+    "MACDCrossoverStrategy",
+    "RSIMeanReversionStrategy",
+    "TrendPullbackStrategy",
+    "MorningStarStrategy",
+    "ThreeWhiteSoldiersStrategy",
+    "CandleCombinedStrategy",
 ]

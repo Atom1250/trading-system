@@ -1,7 +1,8 @@
 import json
 import os
-from typing import List, Dict, Any
 from datetime import datetime
+from typing import Any, Dict, List
+
 
 class ResultsStore:
     def __init__(self, storage_dir: str = "backend/storage"):
@@ -20,13 +21,14 @@ class ResultsStore:
         results = self.get_all_results()
         # Add timestamp/id if missing
         if "id" not in result:
-             # simple ID generation
-             import uuid
-             result["id"] = str(uuid.uuid4())
-        
+            # simple ID generation
+            import uuid
+
+            result["id"] = str(uuid.uuid4())
+
         if "timestamp" not in result:
             result["timestamp"] = datetime.utcnow().isoformat()
-            
+
         results.append(result)
         with open(self.results_file, "w") as f:
             json.dump(results, f, default=str)

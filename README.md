@@ -171,6 +171,100 @@ Then open your browser to `http://localhost:8501` (Not 0.0.0.0)
 - Risk management settings
 - Strategy optimization
 
+### Strategy Lab Core Contracts (PR 01)
+
+Canonical Strategy Lab contracts now live under:
+- `strategy_lab/core/config.py`
+- `strategy_lab/core/types.py`
+
+Backward-compatible imports remain available from `strategy_lab/config.py`.
+
+### Strategy Lab Backtest Runner (PR 02)
+
+Canonical backtest entrypoint is now available at:
+- `strategy_lab/backtest/runner.py`
+
+Use `StrategyLabBacktestRunner` (or `run_backtest`) for single-path Strategy Lab runs.
+
+### Strategy Lab Execution Backend (PR 03)
+
+Backtests now route execution through:
+- `strategy_lab/execution/base.py`
+- `strategy_lab/execution/backtest_engine.py`
+
+Deterministic semantics:
+- Market entries fill at the next bar open.
+- Stop-loss orders trigger intrabar and fill at stop price.
+
+### Legacy Backtest Adapter (PR 04)
+
+Legacy backtester entrypoints now delegate through Strategy Lab via:
+- `trading_backtester/strategy_lab_adapter.py`
+
+Legacy backtester classes are kept for compatibility and emit deprecation warnings.
+
+### Backtest Reports (PR 05)
+
+Canonical report serializers now live in:
+- `strategy_lab/backtest/reports.py`
+
+Report payloads include:
+- summary metrics (including cumulative return and max drawdown)
+- equity curve rows
+- trade log rows
+
+### Backtest Persistence (PR 06)
+
+Strategy Lab persistence layer now includes:
+- `strategy_lab/persistence/mappers.py`
+- `strategy_lab/persistence/repo.py`
+
+Persisted artifacts:
+- backtest run metadata (run id + config hash)
+- trade rows
+- equity history rows
+
+Repository writes are idempotent for repeated saves of the same run id.
+
+### Backtest API Endpoints (PR 07)
+
+New endpoints for run + retrieval:
+- `POST /api/v1/backtests/run`
+- `GET /api/v1/backtests/{run_id}/summary`
+- `GET /api/v1/backtests/{run_id}/trades`
+- `GET /api/v1/backtests/{run_id}/equity`
+
+### Paper Trading Sessions (PR 08)
+
+Paper trading skeleton adds:
+- `strategy_lab/execution/paper_engine.py`
+- `backend/services/trading_service.py`
+
+Session endpoints:
+- `POST /api/v1/trading/sessions/start`
+- `POST /api/v1/trading/sessions/stop?session_id=...`
+- `GET /api/v1/trading/sessions/{session_id}/status`
+
+### Broker Scaffolding (PR 09)
+
+Mock-only broker scaffolding is now available:
+- `strategy_lab/execution/broker_adapter.py`
+- `strategy_lab/execution/broker_engine.py`
+- `strategy_lab/execution/reconciliation.py`
+
+This phase does not require broker API keys or real broker connections.
+
+### ML Runway (PR 10)
+
+ML strategy primitives added:
+- `strategy_lab/ml/feature_registry.py`
+- `strategy_lab/ml/model_interface.py`
+- `strategy_lab/ml/score_policy.py`
+- `strategy_lab/strategies/model_strategy.py`
+
+Includes deterministic dummy-model backtest coverage in:
+- `strategy_lab/tests/test_ml_model_strategy_backtest.py`
+
 ### Command-Line Options
 
 ```bash

@@ -5,11 +5,10 @@ from typing import Any
 from sqlalchemy import Column, DateTime
 from sqlalchemy import Enum as SQLEnum
 from sqlalchemy import ForeignKey, Integer, Numeric, String
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import declarative_base, relationship
 from sqlalchemy.sql import func
 
-from models.portfolio import OrderType, PositionSide, TradeStatus
+from backend.models.portfolio import OrderType, PositionSide, TradeStatus
 
 Base: Any = declarative_base()
 

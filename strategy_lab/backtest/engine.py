@@ -141,6 +141,9 @@ class StrategyBacktestEngine:
             # A. Mark to Market
             self._update_portfolio_valuation(portfolio, market_data, timestamp)
 
+            # B. Check Stop Loss / Take Profit
+            self._check_risk_exits(portfolio, market_data, timestamp, trade_log)
+
             # Record Equity
             equity_curve.append(
                 {
@@ -329,6 +332,7 @@ class StrategyBacktestEngine:
                 "price": price,
                 "quantity": float(position.quantity),
                 "pnl": 0.0,
+                "reason": "SIGNAL",
             },
         )
 
@@ -339,6 +343,7 @@ class StrategyBacktestEngine:
         price: float,
         timestamp,
         trade_log: list,
+        label: Optional[str] = None,
     ):
         """Execute trade to close position."""
         pos = portfolio.remove_position(symbol)
@@ -373,5 +378,62 @@ class StrategyBacktestEngine:
                 "price": float(price),
                 "quantity": float(pos.quantity),
                 "pnl": float(pnl),
+                "reason": label or "SIGNAL",
             },
         )
+
+    def _check_risk_exits(
+        self,
+        portfolio: PortfolioState,
+        market_data: dict[str, MarketDataSlice],
+        timestamp,
+        trade_log: list,
+    ):
+        """Check if any open positions hit stop-loss or take-profit."""
+        # Using list() to avoid "dictionary changed size during iteration" if we close
+        symbols_to_close = []
+        for symbol, pos in portfolio.open_positions.items():
+            if (
+                symbol not in market_data
+                or timestamp not in market_data[symbol].df.index
+            ):
+                continue
+
+            bar = market_data[symbol].df.loc[timestamp]
+            high = float(bar["high"])
+            low = float(bar["low"])
+
+            # Check SL/TP
+            hit_sl = False
+            hit_tp = False
+
+            if pos.side == PositionSide.LONG:
+                if pos.stop_loss_price and low <= float(pos.stop_loss_price):
+                    hit_sl = True
+                elif pos.take_profit_price and high >= float(pos.take_profit_price):
+                    hit_tp = True
+            else:  # SHORT
+                if pos.stop_loss_price and high >= float(pos.stop_loss_price):
+                    hit_sl = True
+                elif pos.take_profit_price and low <= float(pos.take_profit_price):
+                    hit_tp = True
+
+            if hit_sl or hit_tp:
+                # Use stop_loss_price or take_profit_price as exit price for realistic simulation
+                # (Assuming fill at the triggered level)
+                exit_price = (
+                    float(pos.stop_loss_price)
+                    if hit_sl
+                    else float(pos.take_profit_price)
+                )
+                symbols_to_close.append((symbol, exit_price, "SL" if hit_sl else "TP"))
+
+        for symbol, exit_price, label in symbols_to_close:
+            self._execute_close(
+                portfolio,
+                symbol,
+                exit_price,
+                timestamp,
+                trade_log,
+                label=label,
+            )

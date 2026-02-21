@@ -11,6 +11,8 @@ __all__ = [
     "macd",
     "rsi",
     "sma",
+    "morning_star",
+    "three_white_soldiers",
 ]
 
 
@@ -192,3 +194,72 @@ def average_true_range(
     col_name = f"ATR_{window}"
     df[col_name] = true_range.rolling(window=window, min_periods=window).mean()
     return df[col_name]
+
+
+def morning_star(df: pd.DataFrame) -> pd.Series:
+    """Detect the Morning Star candlestick pattern.
+
+    A three-candle bullish reversal pattern:
+    1. Long bearish candle.
+    2. Small body candle (star) that gaps down.
+    3. Long bullish candle that closes above the midpoint of the first candle.
+
+    Args:
+        df: DataFrame with open, high, low, close columns.
+
+    Returns:
+        Boolean series indicating the presence of a Morning Star pattern.
+    """
+    required = ["open", "high", "low", "close"]
+    if not all(col in df.columns for col in required):
+        raise KeyError(
+            f"Missing required columns: {[c for c in required if c not in df.columns]}"
+        )
+
+    body = (df["close"] - df["open"]).abs()
+    candle_range = df["high"] - df["low"]
+    is_bearish = df["close"] < df["open"]
+    is_bullish = df["close"] > df["open"]
+
+    # Condition 1: First candle is long and bearish
+    cond1 = is_bearish.shift(2) & (body.shift(2) > 0.6 * candle_range.shift(2))
+
+    # Condition 2: Second candle has a small body
+    cond2 = body.shift(1) < 0.3 * candle_range.shift(1)
+
+    # Condition 3: Third candle is bullish and closes above midpoint of first candle
+    midpoint_first = (df["open"].shift(2) + df["close"].shift(2)) / 2
+    cond3 = is_bullish & (df["close"] > midpoint_first)
+
+    df["morning_star"] = cond1 & cond2 & cond3
+    return df["morning_star"]
+
+
+def three_white_soldiers(df: pd.DataFrame) -> pd.Series:
+    """Detect the Three White Soldiers candlestick pattern.
+
+    Three consecutive long-bodied bullish candles with increasing volume.
+
+    Args:
+        df: DataFrame with open, high, low, close, volume columns.
+
+    Returns:
+        Boolean series indicating the presence of Three White Soldiers.
+    """
+    required = ["open", "high", "low", "close", "volume"]
+    if not all(col in df.columns for col in required):
+        raise KeyError(
+            f"Missing required columns: {[c for c in required if c not in df.columns]}"
+        )
+
+    is_bullish = df["close"] > df["open"]
+    body = (df["close"] - df["open"]).abs()
+    candle_range = df["high"] - df["low"]
+    is_long_body = body > 0.5 * candle_range
+    vol_increasing = df["volume"] > df["volume"].shift(1)
+
+    # Each soldier must be bullish, have a long body, and increasing volume
+    soldier = is_bullish & is_long_body & vol_increasing
+
+    df["three_white_soldiers"] = soldier & soldier.shift(1) & soldier.shift(2)
+    return df["three_white_soldiers"]

@@ -39,6 +39,8 @@ class PositionState:
     avg_price: Decimal
     realized_pnl: Decimal = Decimal(0)
     unrealized_pnl: Decimal = Decimal(0)
+    stop_loss_price: Optional[Decimal] = None
+    take_profit_price: Optional[Decimal] = None
     entry_timestamp: Optional[int] = None
     last_update_timestamp: Optional[int] = None
 

@@ -20,6 +20,7 @@ services:
       - ./strategy_lab:/app/strategy_lab
       - ./trading_backtester:/app/trading_backtester
       - ./utils:/app/utils
+      - ./portfolio:/app/portfolio
       - ./data:/app/data
 
   frontend:

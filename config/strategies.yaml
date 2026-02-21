@@ -38,3 +38,33 @@ strategies:
       stop_atr_multiple: 1.5
       take_profit_multiple: 2.0
       max_drawdown_pct: 0.2
+  morning_star:
+    module: strategy_lab.strategies.simple.morning_star
+    class: MorningStarStrategy
+    params:
+      initial_capital: 100000.0
+      risk_per_trade: 0.01
+      atr_window: 14
+      stop_atr_multiple: 1.5
+      take_profit_multiple: 2.0
+      max_drawdown_pct: 0.2
+  three_white_soldiers:
+    module: strategy_lab.strategies.simple.three_white_soldiers
+    class: ThreeWhiteSoldiersStrategy
+    params:
+      initial_capital: 100000.0
+      risk_per_trade: 0.01
+      atr_window: 14
+      stop_atr_multiple: 1.5
+      take_profit_multiple: 2.0
+      max_drawdown_pct: 0.2
+  candle_combined:
+    module: strategy_lab.strategies.simple.candle_combined
+    class: CandleCombinedStrategy
+    params:
+      initial_capital: 100000.0
+      risk_per_trade: 0.01
+      atr_window: 14
+      stop_atr_multiple: 1.5
+      take_profit_multiple: 2.0
+      max_drawdown_pct: 0.2

@@ -5,7 +5,10 @@ risk management, and optimization.
 """
 
 from strategy_lab.config import (
+    BacktestConfig,
+    CapitalAllocationMode,
     EntryMode,
+    ExecutionConfig,
     OptimizationConfig,
     ParameterBound,
     PyramidingConfig,
@@ -18,7 +21,10 @@ from strategy_lab.config import (
 __version__ = "0.1.0"
 
 __all__ = [
+    "BacktestConfig",
+    "CapitalAllocationMode",
     "EntryMode",
+    "ExecutionConfig",
     "OptimizationConfig",
     "ParameterBound",
     "PyramidingConfig",

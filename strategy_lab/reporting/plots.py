@@ -175,3 +175,97 @@ class PerformancePlotter:
         fig.tight_layout()
 
         return fig
+
+    def plot_trade_execution(
+        self,
+        data: pd.DataFrame,
+        trade_log: pd.DataFrame,
+        symbol: str = "Asset",
+    ) -> Optional[Figure]:
+        """Plot OHLCV with signals and trade entry/exit markers.
+
+        Args:
+            data: Market data with OHLCV columns
+            trade_log: DataFrame of executed trades
+            symbol: Asset symbol for the title
+
+        Returns:
+            Matplotlib Figure object
+        """
+        if plt is None:
+            return None
+
+        # Create subplots: 2 rows (Price/Trades, Volume)
+        fig, (ax1, ax2) = plt.subplots(
+            2, 1, figsize=(14, 10), gridspec_kw={"height_ratios": [3, 1]}, sharex=True
+        )
+
+        # 1. Plot Price (Close)
+        ax1.plot(
+            data.index, data["close"], label="Close Price", color="gray", alpha=0.5
+        )
+
+        # 2. Plot Trades
+        if not trade_log.empty:
+            # Entry Markers
+            opens = trade_log[trade_log["type"].str.contains("OPEN")]
+            closes = trade_log[trade_log["type"].str.contains("CLOSE")]
+
+            for _, trade in opens.iterrows():
+                marker = "^" if "BUY" in trade["type"] else "v"
+                color = "green" if "BUY" in trade["type"] else "red"
+                ax1.scatter(
+                    trade["timestamp"],
+                    trade["price"],
+                    marker=marker,
+                    color=color,
+                    s=100,
+                    label=(
+                        "Open"
+                        if "Open" not in ax1.get_legend_handles_labels()[1]
+                        else ""
+                    ),
+                )
+
+            for _, trade in closes.iterrows():
+                marker = "x"
+                color = "black"
+                reason = trade.get("reason", "SIGNAL")
+                if reason == "SL":
+                    color = "darkred"
+                elif reason == "TP":
+                    color = "darkgreen"
+
+                ax1.scatter(
+                    trade["timestamp"],
+                    trade["price"],
+                    marker=marker,
+                    color=color,
+                    s=100,
+                    label=(
+                        "Close"
+                        if "Close" not in ax1.get_legend_handles_labels()[1]
+                        else ""
+                    ),
+                )
+
+        ax1.set_title(f"Trade Execution: {symbol}", fontsize=14)
+        ax1.set_ylabel("Price")
+        ax1.legend(loc="best")
+        ax1.grid(True, alpha=0.3)
+
+        # 3. Plot Volume
+        colors = [
+            "green" if data.loc[dt, "close"] >= data.loc[dt, "open"] else "red"
+            for dt in data.index
+        ]
+        ax2.bar(data.index, data["volume"], color=colors, alpha=0.7)
+        ax2.set_ylabel("Volume")
+        ax2.grid(True, alpha=0.3)
+
+        # Format dates
+        ax2.xaxis.set_major_formatter(mdates.DateFormatter("%Y-%m-%d"))
+        fig.autofmt_xdate()
+        fig.tight_layout()
+
+        return fig
