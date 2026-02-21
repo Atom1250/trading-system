@@ -88,3 +88,55 @@ export async function fetchFeatureImportance(modelName: string) {
     return res.json();
 }
 
+// Portfolio & Journal Fetchers
+export async function fetchPortfolioState(runId: string) {
+    const res = await fetch(`${API_URL}/portfolio/state?run_id=${runId}`, {
+        cache: 'no-store',
+    });
+    if (!res.ok) throw new Error('Failed to fetch portfolio state');
+    return res.json();
+}
+
+export async function fetchPortfolioTrades(runId: string) {
+    const res = await fetch(`${API_URL}/portfolio/trades?run_id=${runId}`, {
+        cache: 'no-store',
+    });
+    if (!res.ok) throw new Error('Failed to fetch portfolio trades');
+    return res.json();
+}
+
+export async function fetchPortfolioMetrics(runId: string) {
+    const res = await fetch(`${API_URL}/portfolio/metrics?run_id=${runId}`, {
+        cache: 'no-store',
+    });
+    if (!res.ok) throw new Error('Failed to fetch portfolio metrics');
+    return res.json();
+}
+
+export async function fetchTradeNotes(tradeId: string) {
+    const res = await fetch(`${API_URL}/portfolio/journal/${tradeId}`, {
+        cache: 'no-store',
+    });
+    if (!res.ok) throw new Error('Failed to fetch trade notes');
+    return res.json();
+}
+
+export async function createTradeNote(payload: { trade_id: string; content: string; author?: string }) {
+    const res = await fetch(`${API_URL}/portfolio/journal`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+        cache: 'no-store',
+    });
+    if (!res.ok) throw new Error('Failed to create trade note');
+    return res.json();
+}
+
+export async function fetchPortfolioAllocations(runId: string) {
+    const res = await fetch(`${API_URL}/portfolio/allocations?run_id=${runId}`, {
+        cache: 'no-store',
+    });
+    if (!res.ok) throw new Error('Failed to fetch portfolio allocations');
+    return res.json();
+}
+

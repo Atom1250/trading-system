@@ -2,7 +2,8 @@
 
 import { useState } from "react"
 import { format } from "date-fns"
-import { Calendar as CalendarIcon, Loader2, Play } from "lucide-react"
+import { Calendar as CalendarIcon, Loader2, Play, MessageSquare } from "lucide-react"
+import Link from "next/link"
 
 import { Button } from "@/components/ui/button"
 import { Calendar } from "@/components/ui/calendar"
@@ -344,6 +345,7 @@ export default function BacktestPage() {
                                                     <th className="h-10 px-2 align-middle font-medium text-muted-foreground">Price</th>
                                                     <th className="h-10 px-2 align-middle font-medium text-muted-foreground">Qty</th>
                                                     <th className="h-10 px-2 align-middle font-medium text-muted-foreground">PnL</th>
+                                                    <th className="h-10 px-2 align-middle font-medium text-muted-foreground text-right border-l pl-2">Journal</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
@@ -355,6 +357,13 @@ export default function BacktestPage() {
                                                         <td className="p-2 align-middle">{trade.quantity.toFixed(4)}</td>
                                                         <td className={cn("p-2 align-middle", trade.pnl > 0 ? "text-green-600" : trade.pnl < 0 ? "text-red-600" : "")}>
                                                             {formatCurrency(trade.pnl)}
+                                                        </td>
+                                                        <td className="p-2 align-middle text-right border-l pl-2">
+                                                            <Link href="/journal">
+                                                                <Button variant="ghost" size="icon" className="h-7 w-7">
+                                                                    <MessageSquare className="h-3.5 w-3.5" />
+                                                                </Button>
+                                                            </Link>
                                                         </td>
                                                     </tr>
                                                 ))}

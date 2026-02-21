@@ -84,7 +84,7 @@ export default async function Home() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-6 mb-12">
         {/* Quick Actions */}
         <Card className="hover:shadow-lg transition-shadow">
           <CardHeader>
@@ -153,13 +153,53 @@ export default async function Home() {
             </div>
             <CardTitle>AI / ML Analytics</CardTitle>
             <CardDescription>
-              Visualize model internals and technical feature weights.
+              Visualize model internals and weights.
             </CardDescription>
           </CardHeader>
           <CardContent>
             <Link href="/ml">
               <Button variant="outline" className="w-full group">
                 Examine Models
+                <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
+              </Button>
+            </Link>
+          </CardContent>
+        </Card>
+
+        <Card className="hover:shadow-lg transition-shadow">
+          <CardHeader>
+            <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mb-4">
+              <Activity className="w-6 h-6 text-primary" />
+            </div>
+            <CardTitle>Trade Journal</CardTitle>
+            <CardDescription>
+              Blogging layer for trade commentary.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Link href="/journal">
+              <Button variant="outline" className="w-full group">
+                Open Blog
+                <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
+              </Button>
+            </Link>
+          </CardContent>
+        </Card>
+
+        <Card className="hover:shadow-lg transition-shadow">
+          <CardHeader>
+            <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mb-4">
+              <Server className="w-6 h-6 text-primary" />
+            </div>
+            <CardTitle>Portfolio Navigator</CardTitle>
+            <CardDescription>
+              Global performance and positions.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Link href="/portfolio">
+              <Button variant="outline" className="w-full group">
+                View Portfolio
                 <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
               </Button>
             </Link>

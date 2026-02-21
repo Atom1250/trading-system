@@ -19,7 +19,7 @@ from portfolio.metrics.schemas import PerformanceMetrics, StrategyMetrics
 router = APIRouter()
 
 
-def get_timeline(run_id: str, db: Session):
+def get_timeline(db: Session, run_id: str | None = None):
     trades = list_trades(db, run_id=run_id)
     if not trades:
         raise HTTPException(status_code=404, detail="Run ID not found or has no trades")
@@ -27,22 +27,28 @@ def get_timeline(run_id: str, db: Session):
 
 
 @router.get("/state", response_model=PortfolioSnapshot)
-def get_portfolio_state(run_id: str = Query(...), db: Session = Depends(get_db)):
-    timeline = get_timeline(run_id, db)
+def get_portfolio_state(
+    run_id: str | None = Query(None), db: Session = Depends(get_db)
+):
+    timeline = get_timeline(db, run_id)
     return timeline.final_state
 
 
 @router.get("/trades", response_model=List[TradeEvent])
-def get_portfolio_trades(run_id: str = Query(...), db: Session = Depends(get_db)):
+def get_portfolio_trades(
+    run_id: str | None = Query(None), db: Session = Depends(get_db)
+):
     trades = list_trades(db, run_id=run_id)
-    if not trades:
-        raise HTTPException(status_code=404, detail="Run ID not found or has no trades")
-    return trades
+    # Sort by timestamp descending to show most recent first
+    trades.sort(key=lambda x: x.timestamp, reverse=True)
+    return trades[:100]  # Limit to 100 for the journal
 
 
 @router.get("/equity", response_model=List[dict])
-def get_portfolio_equity(run_id: str = Query(...), db: Session = Depends(get_db)):
-    timeline = get_timeline(run_id, db)
+def get_portfolio_equity(
+    run_id: str | None = Query(None), db: Session = Depends(get_db)
+):
+    timeline = get_timeline(db, run_id)
     return [
         {"timestamp": s.timestamp, "equity": s.equity, "cash": s.cash}
         for s in timeline.snapshots
@@ -50,22 +56,28 @@ def get_portfolio_equity(run_id: str = Query(...), db: Session = Depends(get_db)
 
 
 @router.get("/metrics", response_model=PerformanceMetrics)
-def get_portfolio_metrics(run_id: str = Query(...), db: Session = Depends(get_db)):
-    timeline = get_timeline(run_id, db)
+def get_portfolio_metrics(
+    run_id: str | None = Query(None), db: Session = Depends(get_db)
+):
+    timeline = get_timeline(db, run_id)
     return calculate_performance_metrics(timeline)
 
 
 @router.get("/positions", response_model=dict)
-def get_portfolio_positions(run_id: str = Query(...), db: Session = Depends(get_db)):
-    timeline = get_timeline(run_id, db)
+def get_portfolio_positions(
+    run_id: str | None = Query(None), db: Session = Depends(get_db)
+):
+    timeline = get_timeline(db, run_id)
     return timeline.final_state.positions
 
 
 @router.get("/allocations", response_model=List[StrategyMetrics])
-def get_portfolio_allocations(run_id: str = Query(...), db: Session = Depends(get_db)):
+def get_portfolio_allocations(
+    run_id: str | None = Query(None), db: Session = Depends(get_db)
+):
     trades = list_trades(db, run_id=run_id)
     if not trades:
-        raise HTTPException(status_code=404, detail="Run ID not found or has no trades")
+        return []
     return aggregate_strategy_metrics(trades)
 
 
