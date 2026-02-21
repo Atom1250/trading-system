@@ -4,8 +4,8 @@ import { ArrowRight, BarChart2, FlaskConical, LineChart, Activity, Cpu, Server }
 import Link from "next/link";
 import { fetchDashboardStats, fetchRecentActivity } from "@/lib/api";
 
-// Revalidate every 60 seconds
-export const revalidate = 60;
+// Force dynamic rendering as we depend on the backend API
+export const dynamic = 'force-dynamic';
 
 export default async function Home() {
   let stats = null;
