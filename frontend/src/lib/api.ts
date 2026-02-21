@@ -67,3 +67,24 @@ export async function runOptimization(payload: any) {
     }
     return res.json();
 }
+
+export async function fetchMLModels() {
+    const res = await fetch(`${API_URL}/ml/models`, {
+        cache: 'no-store',
+    });
+    if (!res.ok) {
+        throw new Error('Failed to fetch ML models');
+    }
+    return res.json();
+}
+
+export async function fetchFeatureImportance(modelName: string) {
+    const res = await fetch(`${API_URL}/ml/feature-importance/${modelName}`, {
+        cache: 'no-store',
+    });
+    if (!res.ok) {
+        throw new Error('Failed to fetch feature importance');
+    }
+    return res.json();
+}
+

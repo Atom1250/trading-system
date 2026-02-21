@@ -84,8 +84,8 @@ export default async function Home() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
-        {/* Quick Actions (Same as before) */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
+        {/* Quick Actions */}
         <Card className="hover:shadow-lg transition-shadow">
           <CardHeader>
             <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mb-4">
@@ -145,6 +145,26 @@ export default async function Home() {
             </Link>
           </CardContent>
         </Card>
+
+        <Card className="hover:shadow-lg transition-shadow">
+          <CardHeader>
+            <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mb-4">
+              <Cpu className="w-6 h-6 text-primary" />
+            </div>
+            <CardTitle>AI / ML Analytics</CardTitle>
+            <CardDescription>
+              Visualize model internals and technical feature weights.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Link href="/ml">
+              <Button variant="outline" className="w-full group">
+                Examine Models
+                <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
+              </Button>
+            </Link>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Recent Activity Table */}
@@ -153,9 +173,9 @@ export default async function Home() {
         <Card>
           <CardContent className="p-0">
             <div className="relative w-full overflow-auto">
-              <table className="w-full caption-bottom text-sm">
+              <table className="w-full caption-bottom text-sm text-center">
                 <thead className="[&_tr]:border-b">
-                  <tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
+                  <tr className="border-b transition-colors hover:bg-muted/50">
                     <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Type</th>
                     <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Strategy</th>
                     <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Symbol</th>
@@ -167,10 +187,10 @@ export default async function Home() {
                   {activity.length > 0 ? (
                     activity.map((item: any) => (
                       <tr key={item.id} className="border-b transition-colors hover:bg-muted/50">
-                        <td className="p-4 align-middle capitalize">{item.type}</td>
-                        <td className="p-4 align-middle">{item.strategy}</td>
-                        <td className="p-4 align-middle font-semibold">{item.symbol}</td>
-                        <td className="p-4 align-middle">
+                        <td className="p-4 align-middle text-left capitalize">{item.type}</td>
+                        <td className="p-4 align-middle text-left">{item.strategy}</td>
+                        <td className="p-4 align-middle text-left font-semibold">{item.symbol}</td>
+                        <td className="p-4 align-middle text-left">
                           {item.metrics.return && <span className="text-green-600 mr-2">Ret: {item.metrics.return}</span>}
                           {item.metrics.sharpe && <span className="text-blue-600">Sharpe: {item.metrics.sharpe}</span>}
                         </td>
@@ -196,7 +216,6 @@ export default async function Home() {
       <div className="mt-16 border-t pt-8 text-center text-sm text-muted-foreground">
         <p>Built with Next.js, FastAPI, and Python • Version 2.0.0</p>
       </div>
-
     </div>
   );
 }

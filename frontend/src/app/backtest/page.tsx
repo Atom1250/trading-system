@@ -45,6 +45,14 @@ export default function BacktestPage() {
             setParameters('{\n  "period": 14,\n  "lower_threshold": 30,\n  "upper_threshold": 70\n}')
         } else if (val === "TrendPullback") {
             setParameters('{\n  "ema_period": 50,\n  "rsi_period": 14,\n  "rsi_threshold": 40\n}')
+        } else if (val === "MorningStar") {
+            setParameters('{\n  "initial_capital": 100000.0\n}')
+        } else if (val === "ThreeWhiteSoldiers") {
+            setParameters('{\n  "initial_capital": 100000.0\n}')
+        } else if (val === "CandleCombined") {
+            setParameters('{\n  "initial_capital": 100000.0\n}')
+        } else if (val === "XGBoostPredictor" || val === "RandomForestPredictor") {
+            setParameters('{\n  "lookback_window": 50,\n  "prediction_horizon": 5,\n  "model_name": "default"\n}')
         }
     }
 
@@ -120,6 +128,11 @@ export default function BacktestPage() {
                                     <SelectItem value="MovingAverageCrossover">Moving Average Crossover</SelectItem>
                                     <SelectItem value="RSIMeanReversion">RSI Mean Reversion</SelectItem>
                                     <SelectItem value="TrendPullback">Trend Pullback</SelectItem>
+                                    <SelectItem value="MorningStar">Morning Star</SelectItem>
+                                    <SelectItem value="ThreeWhiteSoldiers">Three White Soldiers</SelectItem>
+                                    <SelectItem value="CandleCombined">Candle Combined</SelectItem>
+                                    <SelectItem value="XGBoostPredictor">XGBoost Predictor (ML)</SelectItem>
+                                    <SelectItem value="RandomForestPredictor">Random Forest Predictor (ML)</SelectItem>
                                 </SelectContent>
                             </Select>
                         </div>
@@ -350,6 +363,25 @@ export default function BacktestPage() {
                                     </div>
                                 </CardContent>
                             </Card>
+
+                            {/* Execution Chart (Matplotlib) */}
+                            {results.execution_chart && (
+                                <Card>
+                                    <CardHeader>
+                                        <CardTitle>Execution Analysis</CardTitle>
+                                        <CardDescription>Visual drill-down into trade entries, exits, and signals</CardDescription>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <div className="rounded-lg overflow-hidden border bg-white">
+                                            <img
+                                                src={`data:image/png;base64,${results.execution_chart}`}
+                                                alt="Execution Chart"
+                                                className="w-full h-auto"
+                                            />
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            )}
 
                         </>
                     )}
