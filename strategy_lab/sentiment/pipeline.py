@@ -77,7 +77,10 @@ class SentimentPipeline(ABC):
         """
 
     def process_batch(
-        self, texts: list[str], symbols: list[str], **kwargs,
+        self,
+        texts: list[str],
+        symbols: list[str],
+        **kwargs,
     ) -> list[SentimentScore]:
         """Process multiple texts in batch.
 
@@ -98,7 +101,9 @@ class SentimentPipeline(ABC):
         ]
 
     def aggregate_scores(
-        self, scores: list[SentimentScore], method: str = "weighted_average",
+        self,
+        scores: list[SentimentScore],
+        method: str = "weighted_average",
     ) -> float:
         """Aggregate multiple sentiment scores.
 

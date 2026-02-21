@@ -23,9 +23,10 @@ COPY ingestion/ ./ingestion/
 COPY repository/ ./repository/
 COPY backtesting/ ./backtesting/
 COPY indicators/ ./indicators/
-COPY strategy/ ./strategy/
+COPY strategy_lab/ ./strategy_lab/
 COPY trading_backtester/ ./trading_backtester/
 COPY utils/ ./utils/
+COPY portfolio/ ./portfolio/
 
 # Set working directory to backend
 WORKDIR /app/backend

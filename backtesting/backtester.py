@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import warnings
 from pathlib import Path
 from typing import Optional, Union
 
@@ -33,6 +34,12 @@ class Backtester:
         self.results_path = Path(results_path)
         self.initial_cash = initial_cash
         self.commission = commission
+        warnings.warn(
+            "backtesting.Backtester is deprecated. "
+            "Use strategy_lab.backtest.runner.StrategyLabBacktestRunner instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
 
     def run(self, df: pd.DataFrame) -> dict[str, pd.DataFrame | float | str]:
         """Execute the backtest via ``backtesting.py`` and export results.

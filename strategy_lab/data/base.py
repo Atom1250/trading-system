@@ -7,7 +7,7 @@ used throughout the data module.
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Protocol, runtime_checkable, Optional
+from typing import Optional, Protocol, runtime_checkable
 
 import pandas as pd
 
@@ -63,7 +63,10 @@ class HistoricalDataProvider(Protocol):
     """Protocol for historical data providers."""
 
     def get_history(
-        self, symbol: str, start: datetime, end: datetime,
+        self,
+        symbol: str,
+        start: datetime,
+        end: datetime,
     ) -> MarketDataSlice:
         """Get historical data for a symbol.
 

@@ -3,9 +3,10 @@
 import os
 from collections.abc import Generator
 
-from db.models import Base
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
+
+from backend.db.models import Base
 
 # Database URL from environment or default to SQLite
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./trading_system.db")

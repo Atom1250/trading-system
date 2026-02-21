@@ -171,6 +171,100 @@ Then open your browser to `http://localhost:8501` (Not 0.0.0.0)
 - Risk management settings
 - Strategy optimization
 
+### Strategy Lab Core Contracts (PR 01)
+
+Canonical Strategy Lab contracts now live under:
+- `strategy_lab/core/config.py`
+- `strategy_lab/core/types.py`
+
+Backward-compatible imports remain available from `strategy_lab/config.py`.
+
+### Strategy Lab Backtest Runner (PR 02)
+
+Canonical backtest entrypoint is now available at:
+- `strategy_lab/backtest/runner.py`
+
+Use `StrategyLabBacktestRunner` (or `run_backtest`) for single-path Strategy Lab runs.
+
+### Strategy Lab Execution Backend (PR 03)
+
+Backtests now route execution through:
+- `strategy_lab/execution/base.py`
+- `strategy_lab/execution/backtest_engine.py`
+
+Deterministic semantics:
+- Market entries fill at the next bar open.
+- Stop-loss orders trigger intrabar and fill at stop price.
+
+### Legacy Backtest Adapter (PR 04)
+
+Legacy backtester entrypoints now delegate through Strategy Lab via:
+- `trading_backtester/strategy_lab_adapter.py`
+
+Legacy backtester classes are kept for compatibility and emit deprecation warnings.
+
+### Backtest Reports (PR 05)
+
+Canonical report serializers now live in:
+- `strategy_lab/backtest/reports.py`
+
+Report payloads include:
+- summary metrics (including cumulative return and max drawdown)
+- equity curve rows
+- trade log rows
+
+### Backtest Persistence (PR 06)
+
+Strategy Lab persistence layer now includes:
+- `strategy_lab/persistence/mappers.py`
+- `strategy_lab/persistence/repo.py`
+
+Persisted artifacts:
+- backtest run metadata (run id + config hash)
+- trade rows
+- equity history rows
+
+Repository writes are idempotent for repeated saves of the same run id.
+
+### Backtest API Endpoints (PR 07)
+
+New endpoints for run + retrieval:
+- `POST /api/v1/backtests/run`
+- `GET /api/v1/backtests/{run_id}/summary`
+- `GET /api/v1/backtests/{run_id}/trades`
+- `GET /api/v1/backtests/{run_id}/equity`
+
+### Paper Trading Sessions (PR 08)
+
+Paper trading skeleton adds:
+- `strategy_lab/execution/paper_engine.py`
+- `backend/services/trading_service.py`
+
+Session endpoints:
+- `POST /api/v1/trading/sessions/start`
+- `POST /api/v1/trading/sessions/stop?session_id=...`
+- `GET /api/v1/trading/sessions/{session_id}/status`
+
+### Broker Scaffolding (PR 09)
+
+Mock-only broker scaffolding is now available:
+- `strategy_lab/execution/broker_adapter.py`
+- `strategy_lab/execution/broker_engine.py`
+- `strategy_lab/execution/reconciliation.py`
+
+This phase does not require broker API keys or real broker connections.
+
+### ML Runway (PR 10)
+
+ML strategy primitives added:
+- `strategy_lab/ml/feature_registry.py`
+- `strategy_lab/ml/model_interface.py`
+- `strategy_lab/ml/score_policy.py`
+- `strategy_lab/strategies/model_strategy.py`
+
+Includes deterministic dummy-model backtest coverage in:
+- `strategy_lab/tests/test_ml_model_strategy_backtest.py`
+
 ### Command-Line Options
 
 ```bash
@@ -382,6 +476,57 @@ python run_strategy.py --symbol AAPL --strategy my_strategy
 3. **Parallel Processing**: Run multiple symbols in separate processes
 4. **Optimize Parameters**: Use Optuna mode for automated parameter tuning
 
+## Data Quality & Limitations
+
+### Survivorship Bias
+
+> [!WARNING]
+> **Survivorship Bias Risk**: FMP and Yahoo Finance data sources may only include currently-listed stocks, excluding delisted or bankrupt companies. This can lead to overstated historical performance.
+
+**Why This Matters**:
+- Backtests on current S&P 500 constituents exclude companies that failed
+- Results may be 2-5% higher than realistic performance
+- Strategies tested only on "winners" may not work on full market
+
+**Recommendations**:
+1. Use Kaggle dataset for more realistic backtests (includes delisted stocks)
+2. Be aware that backtest results may be optimistic
+3. Validate strategies on out-of-sample data before live trading
+4. Test on multiple time periods and market conditions
+
+**Mitigation**:
+```bash
+# Use Kaggle dataset (includes delisted stocks)
+export TS_PRICE_DATA_SOURCE=kaggle
+python run_strategy.py
+```
+
+---
+
+### Commission & Slippage
+
+**Default Commission**: 0.1% per trade (configurable)
+
+**Slippage**: Not currently modeled (assumes perfect execution at close price)
+
+**Realistic Assumptions**:
+- **Retail traders**: 0.1-0.5% total cost per trade (commission + slippage)
+- **Active traders**: 0.05-0.2% with low-cost brokers
+- **High-frequency**: Slippage dominates, can be 0.5-2% for illiquid stocks
+
+**To adjust commission**:
+```python
+from trading_backtester.backtester import Backtester
+
+# Zero commission (not realistic)
+backtester = Backtester(commission=0.0)
+
+# Higher commission (0.5%)
+backtester = Backtester(commission=0.005)
+```
+
+---
+
 ## Contributing
 
 Contributions are welcome! Please:
@@ -390,9 +535,144 @@ Contributions are welcome! Please:
 3. Add tests for new functionality
 4. Submit a pull request
 
+## Troubleshooting
+
+### Common Issues
+
+#### 1. Import Errors / Module Not Found
+
+**Symptom**: `ModuleNotFoundError: No module named 'pandas'` (or other packages)
+
+**Solution**:
+```bash
+# Ensure virtual environment is activated
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+
+# Verify activation (should show .venv path)
+which python
+
+# Reinstall dependencies if needed
+pip install -r requirements.txt
+```
+
+---
+
+#### 2. API Key Errors
+
+**Symptom**: `FMP API key not found` or `401 Unauthorized`
+
+**Solution**:
+```bash
+# 1. Check .env file exists
+ls -la .env
+
+# 2. Verify API key is set
+cat .env | grep FMP_API_KEY
+
+# 3. If missing, copy from template and add your key
+cp .env.example .env
+nano .env  # Add your FMP_API_KEY
+
+# 4. Alternative: Use Yahoo Finance (no API key needed)
+export TS_PRICE_DATA_SOURCE=yahoo_finance
+```
+
+---
+
+#### 3. Data Source Errors
+
+**Symptom**: `Failed to fetch data for AAPL` or empty DataFrames
+
+**Solution**:
+```bash
+# 1. Try Yahoo Finance as fallback
+export TS_PRICE_DATA_SOURCE=yahoo_finance
+python run_strategy.py
+
+# 2. Clear cache and retry
+rm -rf data/prices/*
+python run_strategy.py --force-refresh
+
+# 3. Check internet connection
+ping financialmodelingprep.com
+```
+
+---
+
+#### 4. Streamlit UI Won't Start
+
+**Symptom**: `streamlit: command not found` or port already in use
+
+**Solution**:
+```bash
+# 1. Ensure virtual environment is activated
+source .venv/bin/activate
+
+# 2. Verify streamlit is installed
+pip show streamlit
+
+# 3. If port 8501 is in use, use different port
+streamlit run ui_streamlit.py --server.port 8502
+
+# 4. Kill existing streamlit process
+pkill -f streamlit
+```
+
+---
+
+#### 5. Permission Errors (Logs Directory)
+
+**Symptom**: `PermissionError: [Errno 13] Permission denied: 'logs/trading_system.log'`
+
+**Solution**:
+```bash
+# Create logs directory with proper permissions
+mkdir -p logs
+chmod 755 logs
+
+# Or run with sudo (not recommended)
+sudo python run_strategy.py
+```
+
+---
+
+### Runability Checklist
+
+Before running the system, verify:
+
+- [ ] **Python 3.10+** installed (`python --version`)
+- [ ] **Virtual environment** activated (`.venv` in prompt)
+- [ ] **Dependencies** installed (`pip list | grep pandas`)
+- [ ] **`.env` file** exists (or using Yahoo Finance)
+- [ ] **Logs directory** exists and writable (`ls -la logs/`)
+- [ ] **Internet connection** active (for data fetching)
+
+**Quick Test**:
+```bash
+# Should display help without errors
+python run_strategy.py --help
+```
+
+---
+
+### Getting Help
+
+If issues persist:
+
+1. **Check logs**: `tail -f logs/trading_system.log`
+2. **Enable debug logging**: Set `LOG_LEVEL=DEBUG` in `.env`
+3. **Search issues**: Check GitHub issues for similar problems
+4. **Report bug**: Open a new issue with:
+   - Python version (`python --version`)
+   - OS (`uname -a` or `ver` on Windows)
+   - Full error message
+   - Steps to reproduce
+
+---
+
 ## License
 
-See LICENSE file for details.
+MIT License - See LICENSE file for details.
 
 ## Support
 

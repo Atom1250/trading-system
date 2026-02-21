@@ -44,7 +44,10 @@ class BacktestService:
         """
         # Get price data
         df = self.price_service.get_prices(
-            symbol=symbol, source=data_source, start=start_date, end=end_date,
+            symbol=symbol,
+            source=data_source,
+            start=start_date,
+            end=end_date,
         )
 
         if df.empty:
@@ -81,24 +84,36 @@ class BacktestService:
             stats = {}
 
         metrics = {
-            "total_return": Decimal(str(stats.get("Return [%]", 0) / 100))
-            if stats.get("Return [%]")
-            else Decimal(0),
-            "total_return_pct": Decimal(str(stats.get("Return [%]", 0)))
-            if stats.get("Return [%]")
-            else Decimal(0),
-            "sharpe_ratio": Decimal(str(stats.get("Sharpe Ratio", 0)))
-            if stats.get("Sharpe Ratio")
-            else None,
-            "max_drawdown": Decimal(str(abs(stats.get("Max. Drawdown [%]", 0)) / 100))
-            if stats.get("Max. Drawdown [%]")
-            else Decimal(0),
-            "max_drawdown_pct": Decimal(str(abs(stats.get("Max. Drawdown [%]", 0))))
-            if stats.get("Max. Drawdown [%]")
-            else Decimal(0),
-            "win_rate": Decimal(str(stats.get("Win Rate [%]", 0)))
-            if stats.get("Win Rate [%]")
-            else None,
+            "total_return": (
+                Decimal(str(stats.get("Return [%]", 0) / 100))
+                if stats.get("Return [%]")
+                else Decimal(0)
+            ),
+            "total_return_pct": (
+                Decimal(str(stats.get("Return [%]", 0)))
+                if stats.get("Return [%]")
+                else Decimal(0)
+            ),
+            "sharpe_ratio": (
+                Decimal(str(stats.get("Sharpe Ratio", 0)))
+                if stats.get("Sharpe Ratio")
+                else None
+            ),
+            "max_drawdown": (
+                Decimal(str(abs(stats.get("Max. Drawdown [%]", 0)) / 100))
+                if stats.get("Max. Drawdown [%]")
+                else Decimal(0)
+            ),
+            "max_drawdown_pct": (
+                Decimal(str(abs(stats.get("Max. Drawdown [%]", 0))))
+                if stats.get("Max. Drawdown [%]")
+                else Decimal(0)
+            ),
+            "win_rate": (
+                Decimal(str(stats.get("Win Rate [%]", 0)))
+                if stats.get("Win Rate [%]")
+                else None
+            ),
             "num_trades": int(stats.get("# Trades", 0)) if stats.get("# Trades") else 0,
             "avg_trade": None,  # TODO: Calculate from trades
         }
@@ -110,9 +125,11 @@ class BacktestService:
             for date, value in ec.items():
                 equity_curve.append(
                     {
-                        "date": date.isoformat()
-                        if hasattr(date, "isoformat")
-                        else str(date),
+                        "date": (
+                            date.isoformat()
+                            if hasattr(date, "isoformat")
+                            else str(date)
+                        ),
                         "value": float(value),
                     },
                 )

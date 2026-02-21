@@ -3,8 +3,8 @@
 from datetime import datetime
 from decimal import Decimal
 from enum import Enum
-
 from typing import Optional
+
 from pydantic import BaseModel, ConfigDict, Field
 
 
@@ -44,7 +44,6 @@ class PortfolioBase(BaseModel):
 
 class PortfolioCreate(PortfolioBase):
     """Portfolio creation model."""
-
 
 
 class Portfolio(PortfolioBase):
@@ -106,7 +105,8 @@ class TradeCreate(TradeBase):
 
     portfolio_id: int
     strategy_id: Optional[int] = Field(
-        None, description="Strategy that generated trade",
+        None,
+        description="Strategy that generated trade",
     )
 
 

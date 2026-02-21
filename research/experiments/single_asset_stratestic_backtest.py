@@ -37,7 +37,8 @@ def run_stratestic_backtest_for_symbol(
 
     price_series = dataframe_to_stratestic_timeseries(raw_data)
     strategy = build_ma_crossover_strategy(
-        short_window=short_window, long_window=long_window,
+        short_window=short_window,
+        long_window=long_window,
     )
 
     from stratestic.execution import BacktestEngine

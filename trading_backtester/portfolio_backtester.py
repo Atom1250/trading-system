@@ -22,7 +22,8 @@ class PortfolioBacktester:
         self.strategy_return_column = strategy_return_column
 
     def run(
-        self, results_by_symbol: dict[str, pd.DataFrame],
+        self,
+        results_by_symbol: dict[str, pd.DataFrame],
     ) -> dict[str, pd.DataFrame | float | str]:
         """Run a simple equal-weight portfolio backtest from individual results.
 
@@ -67,7 +68,8 @@ class PortfolioBacktester:
         self._export_results(results)
 
         logger.info(
-            "Portfolio backtest completed; results exported to %s", self.results_path,
+            "Portfolio backtest completed; results exported to %s",
+            self.results_path,
         )
 
         cumulative_return = (

@@ -14,7 +14,8 @@ class StrategyConfig(BaseModel):
     module: str = Field(..., description="Python module path")
     class_name: str = Field(..., description="Strategy class name")
     parameters: dict[str, Any] = Field(
-        default_factory=dict, description="Strategy parameters",
+        default_factory=dict,
+        description="Strategy parameters",
     )
 
 
@@ -24,7 +25,8 @@ class BacktestRequest(BaseModel):
     symbol: str = Field(..., description="Stock symbol")
     strategy_name: str = Field(..., description="Strategy name")
     parameters: Optional[dict[str, Any]] = Field(
-        None, description="Strategy parameters override",
+        None,
+        description="Strategy parameters override",
     )
     start_date: Optional[datetime] = Field(None, description="Backtest start date")
     end_date: Optional[datetime] = Field(None, description="Backtest end date")

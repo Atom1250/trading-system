@@ -40,7 +40,8 @@ class GoogleSheetsService:
                 "https://www.googleapis.com/auth/drive",
             ]
             creds = Credentials.from_service_account_file(
-                self.credentials_path, scopes=scopes,
+                self.credentials_path,
+                scopes=scopes,
             )
             self.client = gspread.authorize(creds)
         except Exception as e:

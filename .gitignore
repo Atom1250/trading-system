@@ -32,8 +32,21 @@ Thumbs.db
 # Workspace Settings
 .vscode/
 
+# Google/GCP credential files
+config/credentials.json
 config/Credentials.json
-<<<<<<< HEAD
+config/*credentials*.json
+**/*service-account*.json
 
-=======
->>>>>>> 09742ae (updating gitignore)
+# Virtualenv created by tooling
+.venv/
+
+# Database and state files
+*.db
+*.db-journal
+*.sqlite
+backend/storage/*.json
+backend/backend/storage/*.json
+backend/trading_system.db
+trading_system.db
+ml_models/

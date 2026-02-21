@@ -39,10 +39,14 @@ def _objective(
 ):
     def objective(trial: optuna.trial.Trial) -> float:
         short_window = trial.suggest_int(
-            "short_window", short_window_range[0], short_window_range[1],
+            "short_window",
+            short_window_range[0],
+            short_window_range[1],
         )
         long_window = trial.suggest_int(
-            "long_window", long_window_range[0], long_window_range[1],
+            "long_window",
+            long_window_range[0],
+            long_window_range[1],
         )
 
         if short_window >= long_window:

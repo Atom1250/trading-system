@@ -1,7 +1,7 @@
 """Strategy API endpoints."""
 
-
 from fastapi import APIRouter, HTTPException
+
 from models.strategy import (
     BacktestMetrics,
     BacktestRequest,
@@ -36,7 +36,8 @@ async def get_strategy(strategy_name: str):
 
     if strategy_name not in strategies:
         raise HTTPException(
-            status_code=404, detail=f"Strategy '{strategy_name}' not found",
+            status_code=404,
+            detail=f"Strategy '{strategy_name}' not found",
         )
 
     info = strategies[strategy_name]

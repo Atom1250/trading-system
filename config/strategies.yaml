@@ -1,7 +1,7 @@
 default_strategy: moving_average_crossover
 strategies:
   moving_average_crossover:
-    module: strategy.moving_average_crossover
+    module: strategy_lab.strategies.simple.moving_average
     class: MovingAverageCrossoverStrategy
     params:
       short_window: 20
@@ -13,7 +13,7 @@ strategies:
       take_profit_multiple: 2.0
       max_drawdown_pct: 0.2
   macd_crossover:
-    module: strategy.macd_crossover
+    module: strategy_lab.strategies.simple.macd
     class: MACDCrossoverStrategy
     params:
       fast_span: 12
@@ -26,12 +26,42 @@ strategies:
       take_profit_multiple: 2.0
       max_drawdown_pct: 0.2
   rsi_mean_reversion:
-    module: strategy.rsi_mean_reversion
+    module: strategy_lab.strategies.simple.rsi
     class: RSIMeanReversionStrategy
     params:
       period: 14
       lower_threshold: 30
       upper_threshold: 70
+      initial_capital: 100000.0
+      risk_per_trade: 0.01
+      atr_window: 14
+      stop_atr_multiple: 1.5
+      take_profit_multiple: 2.0
+      max_drawdown_pct: 0.2
+  morning_star:
+    module: strategy_lab.strategies.simple.morning_star
+    class: MorningStarStrategy
+    params:
+      initial_capital: 100000.0
+      risk_per_trade: 0.01
+      atr_window: 14
+      stop_atr_multiple: 1.5
+      take_profit_multiple: 2.0
+      max_drawdown_pct: 0.2
+  three_white_soldiers:
+    module: strategy_lab.strategies.simple.three_white_soldiers
+    class: ThreeWhiteSoldiersStrategy
+    params:
+      initial_capital: 100000.0
+      risk_per_trade: 0.01
+      atr_window: 14
+      stop_atr_multiple: 1.5
+      take_profit_multiple: 2.0
+      max_drawdown_pct: 0.2
+  candle_combined:
+    module: strategy_lab.strategies.simple.candle_combined
+    class: CandleCombinedStrategy
+    params:
       initial_capital: 100000.0
       risk_per_trade: 0.01
       atr_window: 14

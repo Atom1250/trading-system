@@ -29,7 +29,6 @@ class RiskViolation(Exception):
     """Exception raised when a trade violates risk constraints."""
 
 
-
 class RiskEngine:
     """Risk management engine.
 
@@ -79,7 +78,10 @@ class RiskEngine:
         )
 
     def _check_entry_mode(
-        self, symbol: str, side: PositionSide, portfolio: PortfolioState,
+        self,
+        symbol: str,
+        side: PositionSide,
+        portfolio: PortfolioState,
     ) -> None:
         """Check if entry is allowed based on entry mode logic.
 
@@ -130,7 +132,10 @@ class RiskEngine:
             )
 
     def _calc_position_size(
-        self, price: float, atr: float, portfolio: PortfolioState,
+        self,
+        price: float,
+        atr: float,
+        portfolio: PortfolioState,
     ) -> Decimal:
         """Calculate position size based on capital allocation model.
 
@@ -212,26 +217,50 @@ class RiskEngine:
         # or rely on pre-filtering.
 
         # 5. Construct Position State
-        # Calculate Stop/TP levels if not provided
+        # Calculate Stop/TP levels
+        _stop_loss = None
+        _take_profit = None
+
+        # Stop Loss
         if stop_price:
-            _stop_loss = stop_price
+            _stop_loss = Decimal(str(stop_price))
+        elif self.risk_config.stop_loss_pct is not None:
+            if side == PositionSide.LONG:
+                _stop_loss = Decimal(str(price * (1 - self.risk_config.stop_loss_pct)))
+            else:
+                _stop_loss = Decimal(str(price * (1 + self.risk_config.stop_loss_pct)))
         else:
             stop_dist = atr * self.risk_config.stop_loss_atr_multiple
             if side == PositionSide.LONG:
-                _stop_loss = price - stop_dist
+                _stop_loss = Decimal(str(price - stop_dist))
             else:
-                _stop_loss = price + stop_dist
+                _stop_loss = Decimal(str(price + stop_dist))
 
-        # Note: PositionState doesn't explicitly store SL/TP in version 1,
-        # but the Strategy or Order will need them.
-        # For now we return the sized PositionState.
+        # Take Profit
+        if self.risk_config.take_profit_pct is not None:
+            if side == PositionSide.LONG:
+                _take_profit = Decimal(
+                    str(price * (1 + self.risk_config.take_profit_pct))
+                )
+            else:
+                _take_profit = Decimal(
+                    str(price * (1 - self.risk_config.take_profit_pct))
+                )
+        else:
+            tp_dist = atr * self.risk_config.take_profit_atr_multiple
+            if side == PositionSide.LONG:
+                _take_profit = Decimal(str(price + tp_dist))
+            else:
+                _take_profit = Decimal(str(price - tp_dist))
 
         return PositionState(
             symbol=symbol,
             side=side,
             quantity=quantity,
             avg_price=Decimal(str(price)),
-            entry_timestamp=None,  # To be set by execution
+            stop_loss_price=_stop_loss,
+            take_profit_price=_take_profit,
+            entry_timestamp=None,
             last_update_timestamp=None,
         )
 
@@ -239,7 +268,10 @@ class RiskEngine:
     # We'll keep helpers that might be useful.
 
     def calculate_stop_loss(
-        self, entry_price: float, atr: float, direction: int = 1,
+        self,
+        entry_price: float,
+        atr: float,
+        direction: int = 1,
     ) -> float:
         """Calculate stop loss price."""
         stop_distance = atr * self.risk_config.stop_loss_atr_multiple

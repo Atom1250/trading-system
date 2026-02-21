@@ -20,7 +20,8 @@ class VolumeMoveBreakoutStrategy(Strategy):
 
         move_threshold = params.get("move_threshold_pct", 0.03)
         avg_vol_window = params.get(
-            "avg_volume_window", 20,
+            "avg_volume_window",
+            20,
         )  # Used if computing locally, but we might rely on factors
         min_vol_mult = params.get("min_volume_multiple", 1.0)
         tp_pct = params.get("take_profit_pct", 0.20)

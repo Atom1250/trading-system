@@ -6,6 +6,7 @@ import importlib.machinery
 import importlib.util
 import logging
 import sys
+import warnings
 from pathlib import Path
 
 import matplotlib as mpl
@@ -18,6 +19,8 @@ if TYPE_CHECKING:
 
 import matplotlib.pyplot as plt
 import pandas as pd
+
+from trading_backtester.strategy_lab_adapter import run_backtest_via_strategy_lab
 
 logger = logging.getLogger(__name__)
 
@@ -126,17 +129,32 @@ class Backtester:
         signal_column: str = "signal",
         results_path: str | Path = "reports/results.csv",
         initial_cash: float = 100_000.0,
-        commission: float = 0.0,
+        commission: float = 0.001,  # 0.1% per trade (changed from 0.0)
     ) -> None:
-        """Create a Backtester with default configuration values."""
+        """Create a Backtester with default configuration values.
+
+        Args:
+            price_column: Column name for price data (default: "close")
+            signal_column: Column name for strategy signals (default: "signal")
+            results_path: Path to save backtest results CSV
+            initial_cash: Starting capital for backtest (default: $100,000)
+            commission: Commission per trade as a fraction (default: 0.001 = 0.1%)
+                       Set to 0.0 for zero-commission backtests (not realistic)
+        """
         self.price_column = price_column
         self.signal_column = signal_column
         self.results_path = Path(results_path)
         self.initial_cash = initial_cash
         self.commission = commission
+        warnings.warn(
+            "trading_backtester.Backtester is deprecated. "
+            "Use strategy_lab.backtest.runner.StrategyLabBacktestRunner instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
 
     def run(self, df: pd.DataFrame) -> dict[str, pd.DataFrame | float | str]:
-        """Execute the backtest via ``backtesting.py`` and export results.
+        """Execute backtest via Strategy Lab adapter and export results.
 
         Args:
             df: Price DataFrame with columns for price and strategy signals.
@@ -148,74 +166,14 @@ class Backtester:
         """
         self._validate_inputs(df)
 
-        bt_df = self._prepare_backtesting_frame(df)
-
-        # Set signal values on the strategy class
-        # Ensure we copy values to avoid reference issues if run multiple times
-        PrecomputedSignalStrategy.signal_values = (
-            df[self.signal_column].fillna(0).to_numpy()
+        return run_backtest_via_strategy_lab(
+            df=df,
+            price_column=self.price_column,
+            signal_column=self.signal_column,
+            results_path=self.results_path,
+            initial_cash=self.initial_cash,
+            commission=self.commission,
         )
-
-        logger.debug("Strategy MRO: %s", PrecomputedSignalStrategy.mro())
-
-        bt_kwargs = {
-            "cash": self.initial_cash,
-            "commission": self.commission,
-            "exclusive_orders": True,
-        }
-
-        _version = (
-            _backtesting_module.__version__
-            if hasattr(_backtesting_module, "__version__")
-            else "unknown"
-        )
-        logger.info("Backtesting version: %s", _version)
-
-        bt = Backtest(bt_df, PrecomputedSignalStrategy, **bt_kwargs)
-
-        stats = bt.run()
-        equity_curve = stats["_equity_curve"].copy()
-
-        # Align equity metrics to the input DataFrame length to avoid pandas
-        # length-mismatch errors when assigning columns. ``backtesting.py``
-        # sometimes returns ``len(df)`` rows (one per bar) and sometimes
-        # ``len(df) + 1`` (including a baseline row). Always take the most recent
-        # ``len(df)`` values and align them to ``df.index``.
-        equity_values = equity_curve["Equity"].to_numpy()
-        equity_series = pd.Series(equity_values[-len(df) :], index=df.index)
-
-        strategy_returns = equity_series.pct_change().fillna(0)
-        cumulative_returns = equity_series.div(equity_series.iloc[0]).sub(1)
-
-        results = df.copy()
-        results["equity"] = equity_series.to_numpy()
-        results["strategy_returns"] = strategy_returns.to_numpy()
-        results["cumulative_returns"] = cumulative_returns.to_numpy()
-
-        if "DrawdownPct" in equity_curve.columns:
-            drawdown_values = equity_curve["DrawdownPct"].to_numpy()[-len(df) :]
-            drawdown = pd.Series(drawdown_values, index=df.index).div(100)
-        else:
-            running_max = equity_series.cummax()
-            drawdown = (equity_series - running_max) / running_max.replace(0, pd.NA)
-        results["drawdown"] = drawdown.to_numpy()
-
-        self._export_results(results)
-
-        logger.info("Backtest completed; results exported to %s", self.results_path)
-
-        cumulative_return = float(stats.get("Return [%]", 0.0)) / 100.0
-        max_drawdown = float(stats.get("Max. Drawdown [%]", 0.0)) / 100.0
-
-        return {
-            "results": results,
-            "stats": stats,
-            "equity_curve": equity_curve["Equity"],  # Return just the Equity series
-            "trades": stats["_trades"],
-            "cumulative_return": cumulative_return,
-            "max_drawdown": max_drawdown,
-            "results_path": str(self.results_path),
-        }
 
     def plot_results(
         self,
