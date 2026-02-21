@@ -1,4 +1,4 @@
-"""Feature importance service with integrated ML model loading."""
+"""Feature importance service — dynamically loads trained ML models from disk."""
 
 import logging
 import os
@@ -9,100 +9,94 @@ import joblib
 
 logger = logging.getLogger(__name__)
 
-# Default directory where trained ML models are stored.
-MODEL_DIR = os.getenv("ML_MODEL_DIR", os.path.join(os.path.dirname(__file__), "../../../ml_models"))
 
-# Placeholder feature importances used as fallback when no model file is found.
-_PLACEHOLDER_IMPORTANCES = [
-    {
-        "feature": "RSI_14",
-        "importance": Decimal("0.25"),
-        "description": "Relative Strength Index (14-period)",
-    },
-    {
-        "feature": "MACD_signal",
-        "importance": Decimal("0.20"),
-        "description": "MACD signal line",
-    },
-    {
-        "feature": "SMA_50",
-        "importance": Decimal("0.18"),
-        "description": "50-day Simple Moving Average",
-    },
-    {
-        "feature": "Volume",
-        "importance": Decimal("0.15"),
-        "description": "Trading volume",
-    },
-    {
-        "feature": "Price_momentum",
-        "importance": Decimal("0.12"),
-        "description": "Price momentum (20-day)",
-    },
-    {
-        "feature": "Volatility",
-        "importance": Decimal("0.10"),
-        "description": "Historical volatility",
-    },
-]
-
-_PLACEHOLDER_PREDICTION = {
-    "predicted_signal": "buy",
-    "confidence": 0.75,
-    "explanation": "Strong RSI and MACD signals with positive momentum",
-}
+def _get_model_dir() -> str:
+    """Return the ML model directory from environment (or the default)."""
+    return os.environ.get("ML_MODEL_DIR", "ml_models")
 
 
 class FeatureImportanceService:
     """Service for model explainability.
 
-    Attempts to load a serialised BasePredictor from disk using the provided
-    model_name. Falls back to static placeholder data if no model file is found,
-    allowing the service to remain functional during development.
+    Loads a serialised ``BasePredictor`` from ``<ML_MODEL_DIR>/<model_name>.joblib``
+    and calls ``get_feature_importances()`` on it.  Returns a structured payload
+    that matches the expected API schema.
+
+    If the model file does not exist, a ``model_not_found`` error payload is
+    returned so callers can surface a clear message rather than silently using
+    stale placeholder data.
     """
 
     def get_feature_importance(self, model_name: str = "default") -> dict[str, Any]:
-        """Return feature importance for a model.
+        """Return feature importance for a trained model.
 
         Args:
-            model_name: Name of the model (resolves to ``<MODEL_DIR>/<model_name>.joblib``).
+            model_name: Name of the model (resolves to ``<ML_MODEL_DIR>/<model_name>.joblib``).
 
         Returns:
-            Dictionary with keys ``model_name``, ``feature_importances``, and
-            ``sample_prediction``.
+            Dictionary with keys:
+                - ``model_name`` (str)
+                - ``feature_importances`` (list of dicts with ``feature``, ``importance``, ``description``)
+                - ``error`` (str | None) — set when a model cannot be loaded
         """
-        model_path = os.path.join(MODEL_DIR, f"{model_name}.joblib")
+        model_dir = _get_model_dir()
+        model_path = os.path.join(model_dir, f"{model_name}.joblib")
 
-        if os.path.isfile(model_path):
-            try:
-                model = joblib.load(model_path)
-                raw_importances = model.get_feature_importances()
+        if not os.path.isfile(model_path):
+            logger.warning(
+                "ML model '%s' not found at '%s'. "
+                "Train and save a model first using predictor.save('%s').",
+                model_name,
+                model_path,
+                model_name,
+            )
+            return {
+                "model_name": model_name,
+                "feature_importances": [],
+                "error": (
+                    f"Model '{model_name}' not found. "
+                    f"Expected file: {model_path}. "
+                    "Please train and save a model using predictor.save(name)."
+                ),
+            }
 
-                # Normalise to the standard list-of-dicts schema.
-                feature_importances = [
-                    {"feature": feat, "importance": Decimal(str(round(imp, 6))), "description": ""}
-                    for feat, imp in sorted(raw_importances.items(), key=lambda x: -x[1])
-                ]
+        try:
+            model = joblib.load(model_path)
+            raw_importances: dict[str, float] = model.get_feature_importances()
 
-                return {
-                    "model_name": model_name,
-                    "feature_importances": feature_importances,
-                    "sample_prediction": _PLACEHOLDER_PREDICTION,
+            feature_importances = [
+                {
+                    "feature": feat,
+                    "importance": Decimal(str(round(imp, 6))),
+                    "description": "",
                 }
-            except Exception as exc:
-                logger.warning(
-                    "Failed to load model '%s' from %s: %s. Falling back to placeholder data.",
-                    model_name,
-                    model_path,
-                    exc,
-                )
+                for feat, imp in sorted(raw_importances.items(), key=lambda x: -x[1])
+            ]
 
-        # Fallback — no model file found or loading failed.
-        return {
-            "model_name": model_name,
-            "feature_importances": _PLACEHOLDER_IMPORTANCES,
-            "sample_prediction": _PLACEHOLDER_PREDICTION,
-        }
+            return {
+                "model_name": model_name,
+                "feature_importances": feature_importances,
+                "error": None,
+            }
+
+        except Exception as exc:
+            logger.exception("Failed to load or query model '%s': %s", model_name, exc)
+            return {
+                "model_name": model_name,
+                "feature_importances": [],
+                "error": f"Failed to load model '{model_name}': {exc}",
+            }
+
+    def list_available_models(self) -> list[str]:
+        """Return the names (without extension) of all .joblib files in ML_MODEL_DIR."""
+        model_dir = _get_model_dir()
+        if not os.path.isdir(model_dir):
+            return []
+        return [
+            os.path.splitext(f)[0]
+            for f in sorted(os.listdir(model_dir))
+            if f.endswith(".joblib")
+        ]
 
 
 # Global service instance
